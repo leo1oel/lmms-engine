@@ -1,0 +1,79 @@
+[tool.black]
+line-length = 240
+
+[build-system]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[tomli]>=6.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lmms_engine"
+version = "0.1.2"
+authors = [
+    { name = "Kaichen Zhang", email = "kaichenzhang358@outlook.com" },
+    { name = "Fanyi Pu", email = "FPU001@e.ntu.edu.sg" },
+]
+description = "A train engine"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.8"
+license = { text = "MIT" }
+dependencies = [
+    "datasets",
+    "hf_transfer",
+    "transformers",
+    "accelerate",
+    "pillow",
+    "peft",
+    "deepspeed",
+    "bitsandbytes",
+    "triton",
+    "loguru",
+    "pydantic",
+    "jsonlines",
+    "librosa",
+    "pynvml",
+    "decord",
+    "torch",
+    "torchvision",
+]
+
+[project.optional-dependencies]
+pref = [
+    "trl==0.16.1",
+    "math-verify",
+]
+
+storage = [
+    "google-cloud-storage",
+    "azure-storage-blob",
+    "azure-identity",
+]
+
+all = [
+    "lmms_engine[pref]",
+    "lmms_engine[storage]",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]
+exclude = [
+    "test"
+]
+
+[tool.wheel]
+exclude = [
+    "test"
+]
+
+[project.scripts]
+lmms_launch="lmms_engine.launch.cli:main"
+
+
+[project.urls]
+Homepage = "https://lmms-lab.framer.ai/"
+Repository = "https://github.com/EvolvingLMMs-Lab/lmms_engine"
