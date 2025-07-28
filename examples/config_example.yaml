@@ -12,7 +12,7 @@
       
       # Inline dataset definitions (no dataset_path needed)
       datasets:
-        - json_path: data/open_thoughts_debug
+        - path: data/open_thoughts_debug
           data_folder: ""
           data_type: arrow
       

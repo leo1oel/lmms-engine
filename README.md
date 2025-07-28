@@ -86,7 +86,7 @@ huggingface-cli download kcz358/open-thoughts-debug --local-dir data/open_though
 You can specify the data by using the following yaml, data folder can be left empty for text dataset.
 ```yaml
 datasets:
-- json_path: data/open_thoughts_debug
+- path: data/open_thoughts_debug
   data_folder: ""
   data_type: arrow
 ```

@@ -69,7 +69,7 @@ class DataUtilities:
         with open(path, "r") as f:
             yaml_data = yaml.safe_load(f)
             datasets = yaml_data.get("datasets")
-            data_paths = [dataset.get("json_path") for dataset in datasets]
+            data_paths = [dataset.get("path") for dataset in datasets]
             data_folders = [dataset.get("data_folder") for dataset in datasets]
             data_types = [dataset.get("data_type") for dataset in datasets]
             force_arrow = any([d_type == "arrow" for d_type in data_types])
@@ -201,7 +201,7 @@ class DataUtilities:
         """Load datasets from inline configuration (similar to load_yaml but without file loading).
         
         Args:
-            datasets: List of dataset configurations with json_path, data_folder, and data_type
+            datasets: List of dataset configurations with path, data_folder, and data_type
             
         Returns:
             Tuple of (data_list, data_folder_list)
@@ -212,7 +212,7 @@ class DataUtilities:
         if not datasets:
             return data_list, data_folder_list
             
-        data_paths = [dataset.get("json_path") for dataset in datasets]
+        data_paths = [dataset.get("path") for dataset in datasets]
         data_folders = [dataset.get("data_folder", "") for dataset in datasets]
         data_types = [dataset.get("data_type", "json") for dataset in datasets]
         force_arrow = any([d_type == "arrow" for d_type in data_types])
