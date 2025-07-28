@@ -7,7 +7,9 @@ Training framework for LMMs-Lab.
 ## Installation
 Installation is simple
 ```bash
-python3 -m pip install -e .
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install -e .
 ```
 
 ### Sequence Packing
@@ -20,13 +22,13 @@ Sequence packing is a techniques to accelerate the training process by removing 
 
 To use rmpad, you should install flash-attn also. You can do it by
 ```bash
-python3 -m pip install flash-attn --no-build-isolation
+uv pip install flash-attn --no-build-isolation
 ```
 
 If you encounter any issue for example symbol not found. This is possibly because of the flash-attn has been compiled on the wrong torch version. You can run
 
 ```bash
-python3 -m pip install --no-build-isolation --no-cache-dir flash-attn
+uv pip install --no-build-isolation --no-cache-dir flash-attn
 ```
 
 To use it, you will need to set
