@@ -1,0 +1,72 @@
+# LMMs Engine Training Configuration Example
+# This is a YAML configuration file that supports comments
+# YAML files provide better readability and maintainability compared to JSON
+
+# Each configuration is a list of tasks
+# Currently supported task types: trainer
+- type: trainer  # Task type, currently only 'trainer' is supported
+  config:
+    # Trainer type - specifies which trainer implementation to use
+    trainer_type: hf_trainer
+    
+    # Dataset configuration
+    # This section defines the dataset(s) to use for training
+    dataset_config:
+      # Dataset name or path
+      dataset_name: "example_dataset"
+      
+      # Additional dataset parameters can be added here
+      # such as:
+      # - split: train
+      # - max_samples: 10000
+      # - preprocessing options
+      
+    # Model configuration
+    # This section defines the model architecture and initialization
+    model_config:
+      # Model type or architecture
+      model_name: "example_model"
+      
+      # Additional model parameters can be added here
+      # such as:
+      # - pretrained_model_name_or_path
+      # - model specific configurations
+      # - quantization settings
+    
+    # Training arguments (based on HuggingFace TrainingArguments)
+    # These parameters control the training process
+    
+    # Basic training parameters
+    output_dir: "./output"  # Directory to save model checkpoints and logs
+    num_train_epochs: 3     # Total number of training epochs
+    per_device_train_batch_size: 8  # Batch size per GPU/TPU core
+    per_device_eval_batch_size: 8   # Batch size for evaluation
+    
+    # Learning rate and optimization
+    learning_rate: 5e-5     # Initial learning rate
+    warmup_steps: 500       # Number of warmup steps
+    weight_decay: 0.01      # Weight decay coefficient
+    
+    # Gradient accumulation and mixed precision
+    gradient_accumulation_steps: 1  # Number of steps to accumulate gradients
+    fp16: true              # Use 16-bit (mixed) precision training
+    
+    # Logging and saving
+    logging_steps: 10       # Log metrics every N steps
+    save_steps: 1000        # Save checkpoint every N steps
+    eval_steps: 500         # Run evaluation every N steps
+    save_total_limit: 3     # Maximum number of checkpoints to keep
+    
+    # Additional training arguments can be added here
+    # See HuggingFace TrainingArguments documentation for full list
+
+# You can add multiple training tasks in the same configuration file
+# - type: trainer
+#   config:
+#     trainer_type: hf_trainer
+#     dataset_config:
+#       dataset_name: "another_dataset"
+#     model_config:
+#       model_name: "another_model"
+#     output_dir: "./output2"
+#     num_train_epochs: 5
