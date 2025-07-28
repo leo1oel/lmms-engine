@@ -10,14 +10,13 @@ Installation is simple
 python3 -m pip install -e .
 ```
 
-### Use rmpad
-Rmpad is a techniques to accelerate the training process by removing the pad. With it enabled, it will boost the training performance quickly. Currently the implementation is being fused with liger-kernel and being patched to the model's forward during training. Thus, we might need to validate the operations. Current Rmpad ops are all written in flash-attn with the `var_len` function so we need to install flash-attn and liger-kernel to use it. If you currently use the fully unpadding techniques start from the input ids, the MFU can reach to about 35-40 under ideal settings. Normally, in most of the cases, a range between 25-35 would be normal
+### Sequence Packing
+Sequence packing is a techniques to accelerate the training process by removing the pad. With it enabled, it will boost the training performance quickly. Currently the implementation is being fused with liger-kernel and being patched to the model's forward during training. Thus, we might need to validate the operations. Current sequence packing ops are all written in flash-attn with the `var_len` function so we need to install `flash-attn` and `liger-kernel` to use it. If you currently use the fully unpadding techniques start from the input ids, the MFU can reach to about 35-40 under ideal settings. Normally, in most of the cases, a range between 25-35 would be normal
 
 #### Current Supported Ops
 - Qwen2 or 2.5 LM series 
 - Qwen2.5 VL
 - QwenAudioEncoder
-- Kino (Unpad start from input ids)
 
 To use rmpad, you should install flash-attn also. You can do it by
 ```bash
@@ -111,46 +110,97 @@ torchrun --nproc_per_node="8" \
     -m lmms_engine.launch.cli --config ${CONFIG}
 ```
 
+## Examples
 
-Launching can also be done by using `accelerate`. But somehow I find in some cases it might create separate processes if you are using multi-machine settings. This is possibly because of the settings of the machine.
+We provide two examples here to demonstrate how to use the training engine in most of the case, you will need to perform the following three steps:
+1. Process the dataset into a specific format and store it in (jsonl/json/arrow)
+2. Write your dataset yaml (Optional if you are only using a single data source)
+3. Prepare your training config
 
-```bash
-# FSDP
-CUDA_LAUNCH_BLOCKING=1 ACCELERATE_CPU_AFFINITY=1 accelerate launch \
-    --use_fsdp \
-    --mixed_precision bf16 \
-    --fsdp_sharding_strategy HYBRID_SHARD \
-    --fsdp_auto_wrap_policy TRANSFORMER_BASED_WRAP \
-    --fsdp_backward_prefetch BACKWARD_PRE \
-    --fsdp_forward_prefetch false \
-    --fsdp_cpu_ram_efficient_loading true \
-    --fsdp_offload_params false \
-    --fsdp_state_dict_type SHARDED_STATE_DICT \
-    --fsdp_sync_module_states true \
-    --fsdp_transformer_layer_cls_to_wrap "SiglipVisionModel,Qwen2DecoderLayer" \
-    --fsdp_use_orig_params true \
-    --num_processes="8" \
-    --num_machines="1" \
-    --main_process_ip=<port_ip> \
-    --main_process_port=<port> \
-    --machine_rank="0" \
-    -m lmms_engine.launch.cli --config scripts/config_custom.json
-```
-
-To launch it using deepspeed, you can
+### 1. Process the dataset
+You will need to process the dataset in OpenAI chat messages format. We prepare an example for you to reference. You can get the data by using
 
 ```bash
-CUDA_LAUNCH_BLOCKING=1 ACCELERATE_CPU_AFFINITY=1 accelerate launch \
-    --use_deepspeed \
-    --mixed_precision bf16 \
-    --deepspeed_config_file zero3.json \
-    --num_processes="8" \
-    --num_machines="1" \
-    --main_process_ip=<port_ip> \
-    --main_process_port=<port> \
-    --machine_rank="0" \
-    -m lmms_engine.launch.cli --config ${CONFIG}
+huggingface-cli download kcz358/open-thoughts-debug --local-dir data/open_thoughts_debug --repo-type dataset
 ```
+
+### 2. Prepare dataset yaml
+You can specify the data by using the following yaml, data folder can be left empty for text dataset.
+```yaml
+datasets:
+- json_path: data/open_thoughts_debug
+  data_folder: ""
+  data_type: arrow
+```
+
+### 3. Prepare training config
+The last step would be to prepare the training config. We support fsdp2 and deepspeed zero
+
+```json
+[
+    {
+        "type" : "trainer",
+        "config" : {
+            "trainer_type": "hf_trainer",
+            "dataset_config": {
+                "dataset_type" : "vision",
+                "dataset_format" : "yaml",
+                "dataset_path" : "./scripts/data_yaml/debug.yaml",
+                "eval_dataset_path": "./scripts/data_yaml/debug_eval.yaml",
+                "packing": true,
+                "packing_strategy": "first_fit",
+                "packing_length": 20480,
+                "processor_config": {
+                    "processor_name": "Qwen/Qwen2.5-VL-7B-Instruct",
+                    "processor_type": "qwen2_5_vl"
+                }
+            },
+            "model_config": {
+                "model_name_or_path" : "Qwen/Qwen2.5-VL-7B-Instruct",
+                "attn_implementation" : "flash_attention_2"
+            },
+            "per_device_train_batch_size": 1,
+            "learning_rate": 1e-06,
+            "weight_decay": 0.0,
+            "gradient_accumulation_steps": 1,
+            "gradient_checkpointing": true,
+            "num_train_epochs": 1,
+            "save_steps": 100,
+            "save_total_limit" : 1,
+            "report_to": "none",
+            "output_dir": "./output/debug",
+            "warmup_ratio": 0.0,
+            "run_name": "qwen2_5_vl_mix_of_thoughts",
+            "eval_strategy": "no",
+            "per_device_eval_batch_size": 4,
+            "eval_steps": 1,
+            "eval_on_start": false,
+            "logging_steps" : 1,
+            "group_by_length" : true,
+            "dataloader_num_workers" : 8,
+            "bf16" : true,
+            "lr_scheduler_type" : "cosine",
+            "freeze_modules" : ["visual"],
+            "use_liger_kernel": true,
+            "use_rmpad": true,
+            "fsdp2": true,
+            "fsdp_config": {
+                "transformer_layer_cls_to_wrap": ["Qwen2_5_VLDecoderLayer"],
+                "reshard_after_forward": false
+            }
+        }
+    }
+]
+```
+
+to switch from fsdp2 to zero2, you can simply remove the fsdp tag and add
+```json
+{
+    ...
+    "deepspeed" : "path/zero2.json"
+}
+```
+
 
 ## More Content
 - [Preparing Data and how the data is load](docs/data_prep.md)
