@@ -7,6 +7,7 @@ from copy import deepcopy
 
 import numpy as np
 import torch
+import yaml
 
 from lmms_engine.mapping_func import DATASET_MAPPING, create_model
 
@@ -162,9 +163,14 @@ class BaseTrainer(ABC):
         with open(f"{output_dir}/training_config.json", "w") as f:
             json.dump(self.config.to_dict(), f, indent=4)
         if self.config.dataset_config.dataset_format == "yaml":
-            # Copy the yaml to output dir
-            yaml_path = self.config.dataset_config.dataset_path
-            shutil.copy(yaml_path, f"{output_dir}/dataset.yaml")
+            if self.config.dataset_config.dataset_path:
+                # Copy the external yaml to output dir
+                yaml_path = self.config.dataset_config.dataset_path
+                shutil.copy(yaml_path, f"{output_dir}/dataset.yaml")
+            elif self.config.dataset_config.datasets:
+                # For inline datasets, save them to a yaml file
+                with open(f"{output_dir}/dataset.yaml", "w") as f:
+                    yaml.dump({"datasets": self.config.dataset_config.datasets}, f)
 
     def set_random_seed(self, random_seed: int = 42):
         # Setting random seed for all
