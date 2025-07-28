@@ -53,50 +53,6 @@ To use it is simple, you need to first install it using `pip install liger-kerne
 2. If the model is not in the registry, we will search if it is in the original liger-kernel implementation
 3. If the model is not in the registry, we will see if it contains a `language_model` component and apply liger-kernel on that
 
-## Prepare Config
-The overall design of our framework is that we build each component as a pipeline, you will need to pass in a config to use for init the pipeline.
-
-An example config
-```json
-[
-    {
-        "type" : "trainer",
-        "config" : {
-            "trainer_type": "hf_trainer",
-            "dataset_config": {
-                "dataset_type" : "vision",
-                "dataset_format" : "json",
-                "dataset_path" : "./data/lmms_engine.json",
-                "processor_config": {
-                    "processor_name": "Qwen/Qwen2-VL-2B-Instruct",
-                    "processor_modality": "vision",
-                    "processor_type": "qwen2_vl"
-                }
-            },
-            "model_config": {
-                "model_name_or_path" : "Qwen/Qwen2-VL-2B-Instruct",
-                "model_class" : "Qwen2VLForConditionalGeneration",
-                "attn_implementation" : "flash_attention_2"
-            },
-            "per_device_train_batch_size": 1,
-            "learning_rate": 5e-05,
-            "weight_decay": 0.0,
-            "gradient_accumulation_steps": 1,
-            "num_train_epochs": 1,
-            "save_steps": 1000,
-            "report_to": "wandb",
-            "output_dir": "./output",
-            "warmup_ratio": 0,
-            "run_name": "test_run",
-            "logging_steps" : 1,
-            "group_by_length" : true,
-            "dataloader_num_workers" : 8,
-            "bf16" : true
-        }
-    }
-]
-```
-
 ## Launch
 
 The recommended way to launch is always use torchrun as it is the most native way to launch torch and in most of the settings this should work. Most of the debug and development should be based on this as we might not always use accelerate in our later framework.
