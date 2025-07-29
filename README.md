@@ -7,7 +7,9 @@ Training framework for LMMs-Lab.
 ## Installation
 Installation is simple
 ```bash
-python3 -m pip install -e .
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install -e .
 ```
 
 ### Sequence Packing
@@ -20,22 +22,19 @@ Sequence packing is a techniques to accelerate the training process by removing 
 
 To use rmpad, you should install flash-attn also. You can do it by
 ```bash
-python3 -m pip install flash-attn --no-build-isolation
+uv pip install flash-attn --no-build-isolation
 ```
 
 If you encounter any issue for example symbol not found. This is possibly because of the flash-attn has been compiled on the wrong torch version. You can run
 
 ```bash
-python3 -m pip install --no-build-isolation --no-cache-dir flash-attn
+uv pip install --no-build-isolation --no-cache-dir flash-attn
 ```
 
 To use it, you will need to set
-```json
-{
-    ...
-    "use_liger_kernel": true,
-    "use_rmpad": true
-}
+```yaml
+use_liger_kernel: true
+use_rmpad: true
 ```
 in the training config. Then the forward would be patched into the model.
 
@@ -47,7 +46,7 @@ If you are trying to debug the forward function during training, you need to go 
 ### Liger Kernel
 [Liger Kernel](https://github.com/linkedin/Liger-Kernel) is a collection of Triton kernels designed specifically for LLM training. It can effectively increase multi-GPU training throughput and reduces memory usage. Based on my testing, it does reduces memory usage when finetuning models. Benchmarking based on my testing under kino stage-1 training settings, it reduces the memory usage by around 30%. The major memory reduction is on the fused CrossEntropy kernel and allow us to use large batch size during training.
 
-To use it is simple, you need to first install it using `pip install liger-kernel`. Then set the `use_liger_kernel` in the trainer config to `true`. The patching logic currently is as follows:
+To use it is simple, you need to first install it using `uv pip install liger-kernel`. Then set the `use_liger_kernel` in the trainer config to `true`. The patching logic currently is as follows:
 
 1. For our custom model, you will need to write your own `apply_liger_kernel_to_xxx` and register the model type to the `MODEL_REGISTRY` in the monkey patch. 
 2. If the model is not in the registry, we will search if it is in the original liger-kernel implementation
@@ -58,12 +57,7 @@ To use it is simple, you need to first install it using `pip install liger-kerne
 The recommended way to launch is always use torchrun as it is the most native way to launch torch and in most of the settings this should work. Most of the debug and development should be based on this as we might not always use accelerate in our later framework.
 
 ```bash
-torchrun --nproc_per_node="8" \
-    --nnodes="1" \
-    --node_rank="0" \
-    --master_addr="<port_ip>" \
-    --master_port="<port>" \
-    -m lmms_engine.launch.cli --config ${CONFIG}
+torchrun --nproc_per_node=8 --nnodes=1 --node_rank=0 --master_addr=127.0.0.1 --master_port=12355 -m lmms_engine.launch.cli --config examples/config_example.yaml
 ```
 
 ## Examples
@@ -84,7 +78,7 @@ huggingface-cli download kcz358/open-thoughts-debug --local-dir data/open_though
 You can specify the data by using the following yaml, data folder can be left empty for text dataset.
 ```yaml
 datasets:
-- json_path: data/open_thoughts_debug
+- path: data/open_thoughts_debug
   data_folder: ""
   data_type: arrow
 ```
@@ -92,67 +86,7 @@ datasets:
 ### 3. Prepare training config
 The last step would be to prepare the training config. We support fsdp2 and deepspeed zero
 
-```json
-[
-    {
-        "type" : "trainer",
-        "config" : {
-            "trainer_type": "hf_trainer",
-            "dataset_config": {
-                "dataset_type" : "vision",
-                "dataset_format" : "yaml",
-                "dataset_path" : "./scripts/data_yaml/debug.yaml",
-                "packing": true,
-                "packing_strategy": "first_fit",
-                "packing_length": 20480,
-                "processor_config": {
-                    "processor_name": "Qwen/Qwen2.5-VL-7B-Instruct",
-                    "processor_type": "qwen2_5_vl"
-                }
-            },
-            "model_config": {
-                "model_name_or_path" : "Qwen/Qwen2.5-VL-7B-Instruct",
-                "attn_implementation" : "flash_attention_2"
-            },
-            "per_device_train_batch_size": 1,
-            "learning_rate": 1e-06,
-            "weight_decay": 0.0,
-            "gradient_accumulation_steps": 1,
-            "gradient_checkpointing": true,
-            "num_train_epochs": 1,
-            "save_steps": 100,
-            "save_total_limit" : 1,
-            "report_to": "none",
-            "output_dir": "./output/debug",
-            "warmup_ratio": 0.0,
-            "run_name": "qwen2_5_vl_mix_of_thoughts",
-            "eval_strategy": "no",
-            "logging_steps" : 1,
-            "group_by_length" : true,
-            "dataloader_num_workers" : 8,
-            "bf16" : true,
-            "lr_scheduler_type" : "cosine",
-            "freeze_modules" : ["visual"],
-            "use_liger_kernel": true,
-            "use_rmpad": true,
-            "fsdp2": true,
-            "fsdp_config": {
-                "transformer_layer_cls_to_wrap": ["Qwen2_5_VLDecoderLayer"],
-                "reshard_after_forward": false
-            }
-        }
-    }
-]
-```
-
-to switch from fsdp2 to zero2, you can simply remove the fsdp tag and add
-```json
-{
-    ...
-    "deepspeed" : "path/zero2.json"
-}
-```
-
+Please check the [config_example.yaml](examples/config_example.yaml) for more details.
 
 ## More Content
 - [Preparing Data and how the data is load](docs/data_prep.md)
