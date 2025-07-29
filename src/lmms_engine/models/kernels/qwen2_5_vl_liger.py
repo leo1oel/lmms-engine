@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -5,12 +6,11 @@ from packaging import version
 from torch.nn import CrossEntropyLoss
 from transformers import Qwen2_5_VLForConditionalGeneration
 from transformers import __version__ as transformers_version
+from transformers.modeling_outputs import ModelOutput
 from transformers.utils import (
     add_start_docstrings_to_model_forward,
     replace_return_docstrings,
 )
-from dataclasses import dataclass
-from transformers.modeling_outputs import ModelOutput
 
 from .utils import calc_gpt_flops
 
@@ -57,9 +57,19 @@ def lce_forward(
     use_rmpad: Optional[bool] = False,
     **kwargs,
 ) -> Union[Tuple, Qwen2_5_VLCausalLMOutputWithPast]:
-    output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-    output_hidden_states = output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-    return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+    output_attentions = (
+        output_attentions
+        if output_attentions is not None
+        else self.config.output_attentions
+    )
+    output_hidden_states = (
+        output_hidden_states
+        if output_hidden_states is not None
+        else self.config.output_hidden_states
+    )
+    return_dict = (
+        return_dict if return_dict is not None else self.config.use_return_dict
+    )
 
     flops = calc_gpt_flops(attention_mask, config=self.config)
     outputs = self.model(

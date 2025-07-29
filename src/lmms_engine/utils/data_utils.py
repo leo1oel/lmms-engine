@@ -197,32 +197,34 @@ class DataUtilities:
         return audio_resample_array
 
     @staticmethod
-    def load_inline_datasets(datasets: List[Dict]) -> Tuple[List[Dict[str, List]], List[str]]:
+    def load_inline_datasets(
+        datasets: List[Dict],
+    ) -> Tuple[List[Dict[str, List]], List[str]]:
         """Load datasets from inline configuration (similar to load_yaml but without file loading).
-        
+
         Args:
             datasets: List of dataset configurations with path, data_folder, and data_type
-            
+
         Returns:
             Tuple of (data_list, data_folder_list)
         """
         data_list = []
         data_folder_list = []
-        
+
         if not datasets:
             return data_list, data_folder_list
-            
+
         data_paths = [dataset.get("path") for dataset in datasets]
         data_folders = [dataset.get("data_folder", "") for dataset in datasets]
         data_types = [dataset.get("data_type", "json") for dataset in datasets]
         force_arrow = any([d_type == "arrow" for d_type in data_types])
-        
+
         with Pool(cpu_count()) as p:
             Logging.info("Loading data with multiprocess...")
             nested_data_list = list(
                 p.imap(DataUtilities.wrap_func, zip(data_paths, data_types))
             )
-        
+
         if force_arrow:
             Logging.info(
                 "Detecting arrow dataset, force everything to be loaded in arrow..."
@@ -241,7 +243,7 @@ class DataUtilities:
                 data_folder_list.extend([data_folder] * len(data))
             data_list = concatenate_datasets(data_list)
             return data_list, data_folder_list
-        
+
         for data, data_folder, data_path in zip(
             nested_data_list, data_folders, data_paths
         ):
@@ -249,5 +251,5 @@ class DataUtilities:
             data_list.extend(data)
             data_folder_list.extend([data_folder] * len(data))
             Logging.info(f"Dataset size: {len(data)}")
-            
+
         return data_list, data_folder_list
