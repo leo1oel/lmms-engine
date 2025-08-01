@@ -12,7 +12,9 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 
-from .utils import calc_gpt_flops
+from lmms_engine.utils import Logging
+
+from ..utils import calc_gpt_flops
 
 try:
     from liger_kernel.transformers.fused_linear_cross_entropy import (
