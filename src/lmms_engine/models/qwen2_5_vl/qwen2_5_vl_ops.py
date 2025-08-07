@@ -30,6 +30,7 @@ from lmms_engine.parallel.sequence_parallel.ulysses import (
     get_ulysses_sequence_parallel_group,
     get_ulysses_sequence_parallel_rank,
     get_ulysses_sequence_parallel_world_size,
+    ulysses_pad,
 )
 from lmms_engine.utils import Logging
 
@@ -45,6 +46,12 @@ logger = logging.get_logger(__name__)
 if is_flash_attn_2_available():
     try:
         from flash_attn import flash_attn_func, flash_attn_varlen_func
+        from flash_attn.bert_padding import (
+            index_first_axis,
+            pad_input,
+            rearrange,
+            unpad_input,
+        )
 
         _flash_supports_window_size = "window_size" in list(
             inspect.signature(flash_attn_func).parameters
@@ -53,57 +60,6 @@ if is_flash_attn_2_available():
         raise ModuleNotFoundError(
             "flash_attn is not available. Please install it via `pip install flash_attn`."
         )
-
-
-def apply_multimodal_rotary_pos_emb_unpad(
-    q, k, cos, sin, mrope_section, attention_mask, unsqueeze_dim=1
-):
-    """Applies Rotary Position Embedding with Multimodal Sections to the query and key tensors (https://qwenlm.github.io/blog/qwen2-vl/).
-
-    Explanation:
-        Multimodal 3D rotary position embedding is an extension to 1D rotary position embedding. The input embedding
-        sequence contains vision (images / videos) embedding and text embedding or just contains text embedding. For
-        vision embedding part, we apply rotary position embedding on temporal, height and width dimension separately.
-        Here we split the channel dimension to 3 chunks for the temporal, height and width rotary position embedding.
-        For text embedding part, we just apply 1D rotary position embedding. The three rotary position index (temporal,
-        height and width) of text embedding is always the same, so the text embedding rotary position embedding has no
-        difference with modern LLMs.
-
-    Args:
-        q (`torch.Tensor`): The query tensor.
-        k (`torch.Tensor`): The key tensor.
-        cos (`torch.Tensor`): The cosine part of the rotary embedding.
-        sin (`torch.Tensor`): The sine part of the rotary embedding.
-        position_ids (`torch.Tensor`):
-            The position indices of the tokens corresponding to the query and key tensors. For example, this can be
-            used to pass offsetted position ids when working with a KV-cache.
-        mrope_section(`List(int)`):
-            Multimodal rope section is for channel dimension of temporal, height and width in rope calculation.
-        unsqueeze_dim (`int`, *optional*, defaults to 1):
-            The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and
-            sin[position_ids] so that they can be properly broadcasted to the dimensions of q and k. For example, note
-            that cos[position_ids] and sin[position_ids] have the shape [batch_size, seq_len, head_dim]. Then, if q and
-            k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
-            cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
-            the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
-    Returns:
-        `tuple(torch.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
-    """
-    mrope_section = mrope_section * 2
-    cos = torch.cat(
-        [m[i % 3] for i, m in enumerate(cos.split(mrope_section, dim=-1))], dim=-1
-    )
-    sin = torch.cat(
-        [m[i % 3] for i, m in enumerate(sin.split(mrope_section, dim=-1))], dim=-1
-    )
-    cos, _, _, _ = _unpad_input(cos, attention_mask)
-    sin, _, _, _ = _unpad_input(sin, attention_mask)
-    cos = cos.unsqueeze(unsqueeze_dim)
-    sin = sin.unsqueeze(unsqueeze_dim)
-
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
-    return q_embed, k_embed
 
 
 @dataclass
@@ -160,6 +116,52 @@ def vl_model_forward(
     input_ids, indices, cu_seq_lens, _ = _unpad_input(
         input_ids, attention_mask=attention_mask
     )
+
+    if attention_mask is not None:
+        attention_mask = attention_mask.to(input_ids.device)
+
+    # if we get 4D attention mask we cannot calculate rope deltas anymore. TODO @raushan fixme
+    if position_ids is None and (attention_mask is None or attention_mask.ndim == 2):
+        # calculate RoPE index once per generation in the pre-fill stage only
+        if (
+            cache_position is not None and cache_position[0] == 0
+        ) or self.rope_deltas is None:
+            position_ids, rope_deltas = self.get_rope_index(
+                original_input_ids,  # Here we use the padded input ids
+                image_grid_thw,
+                video_grid_thw,
+                second_per_grid_ts,
+                attention_mask,
+            )
+            self.rope_deltas = rope_deltas
+        # then use the prev pre-calculated rope-deltas to get the correct position ids
+        else:
+            delta = (
+                (cache_position[0] + self.rope_deltas).to(input_ids.device)
+                if cache_position is not None
+                else 0
+            )
+            position_ids = torch.arange(seq_length, device=input_ids.device)
+            position_ids = position_ids.view(1, -1).expand(batch_size, -1)
+            if cache_position is not None:  # otherwise `deltas` is an int `0`
+                delta = delta.repeat_interleave(batch_size // delta.shape[0], dim=0)
+            position_ids = position_ids.add(delta)
+            position_ids = position_ids.unsqueeze(0).expand(3, -1, -1)
+
+    position_ids = (
+        index_first_axis(rearrange(position_ids, "c b s ... -> (b s) c ..."), indices)
+        .transpose(0, 1)
+        .unsqueeze(1)
+    )
+
+    if get_ulysses_sequence_parallel_world_size() > 1:
+        # Pad the input ids and position ids if the sequence parallelism is used
+        input_ids, position_ids, pad_size = ulysses_pad(
+            input_ids.unsqueeze(0),
+            position_ids,
+            sp_size=get_ulysses_sequence_parallel_world_size(),
+        )
+        input_ids = input_ids.squeeze(0)
 
     if inputs_embeds is None:
         inputs_embeds = self.get_input_embeddings()(input_ids)
@@ -233,37 +235,6 @@ def vl_model_forward(
         inputs_embeds = inputs_embeds.masked_scatter(
             audio_mask, unpadded_audio_features
         )
-
-    if attention_mask is not None:
-        attention_mask = attention_mask.to(inputs_embeds.device)
-
-    # if we get 4D attention mask we cannot calculate rope deltas anymore. TODO @raushan fixme
-    if position_ids is None and (attention_mask is None or attention_mask.ndim == 2):
-        # calculate RoPE index once per generation in the pre-fill stage only
-        if (
-            cache_position is not None and cache_position[0] == 0
-        ) or self.rope_deltas is None:
-            position_ids, rope_deltas = self.get_rope_index(
-                original_input_ids,  # Here we use the padded input ids
-                image_grid_thw,
-                video_grid_thw,
-                second_per_grid_ts,
-                attention_mask,
-            )
-            self.rope_deltas = rope_deltas
-        # then use the prev pre-calculated rope-deltas to get the correct position ids
-        else:
-            delta = (
-                (cache_position[0] + self.rope_deltas).to(inputs_embeds.device)
-                if cache_position is not None
-                else 0
-            )
-            position_ids = torch.arange(seq_length, device=inputs_embeds.device)
-            position_ids = position_ids.view(1, -1).expand(batch_size, -1)
-            if cache_position is not None:  # otherwise `deltas` is an int `0`
-                delta = delta.repeat_interleave(batch_size // delta.shape[0], dim=0)
-            position_ids = position_ids.add(delta)
-            position_ids = position_ids.unsqueeze(0).expand(3, -1, -1)
 
     kwargs = {"cache_position": cache_position}
     outputs = self.language_model(
@@ -558,31 +529,42 @@ def attn_forward(
         repeats = max(ulysses_sp_size // key_states.size(1), 1)
         key_states = repeat_kv(key_states, repeats)
         value_states = repeat_kv(value_states, repeats)
-        dim_size = position_ids.size(-1)
 
         # (seq_len/n, n_head, head_dim) -> (seq_len, n_head/n, head_dim)
-        query_states = gather_seq_scatter_heads(
-            query_states, seq_dim=0, head_dim=1, unpadded_dim_size=dim_size
-        )
-        key_states = gather_seq_scatter_heads(
-            key_states, seq_dim=0, head_dim=1, unpadded_dim_size=dim_size
-        )
-        value_states = gather_seq_scatter_heads(
-            value_states, seq_dim=0, head_dim=1, unpadded_dim_size=dim_size
-        )
+        query_states = gather_seq_scatter_heads(query_states, seq_dim=0, head_dim=1)
+        key_states = gather_seq_scatter_heads(key_states, seq_dim=0, head_dim=1)
+        value_states = gather_seq_scatter_heads(value_states, seq_dim=0, head_dim=1)
+        # Cat the cu_seq_lens to the max seq len if padding is used
+        if cu_seq_lens.max().item() < query_states.shape[0]:
+            cu_seq_lens = torch.cat(
+                [
+                    cu_seq_lens,
+                    torch.tensor(
+                        [query_states.shape[0]],
+                        device=cu_seq_lens.device,
+                        dtype=cu_seq_lens.dtype,
+                    ),
+                ]
+            )
 
-    query_states, key_states = apply_multimodal_rotary_pos_emb_unpad(
+    # Unsqueeze the first dim to apply pos embeds
+    query_states = query_states.unsqueeze(0).transpose(1, 2)
+    key_states = key_states.unsqueeze(0).transpose(1, 2)
+    query_states, key_states = apply_multimodal_rotary_pos_emb(
         query_states,
         key_states,
         cos,
         sin,
         self.rope_scaling["mrope_section"],
-        attention_mask,
     )
 
     max_seqlen = (
         torch.diff(cu_seq_lens).max().item() if cu_seq_lens is not None else None
     )
+
+    # Reshape to the expected shape for Flash Attention
+    query_states = query_states.transpose(1, 2).squeeze(0)
+    key_states = key_states.transpose(1, 2).squeeze(0)
 
     window_size = (-1, -1)
 

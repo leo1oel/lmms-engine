@@ -12,8 +12,17 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 
+from lmms_engine.parallel.sequence_parallel.ulysses import (
+    calculate_seq_len_per_rank,
+    get_ulysses_sequence_parallel_group,
+    get_ulysses_sequence_parallel_rank,
+    get_ulysses_sequence_parallel_world_size,
+    slice_input_tensor,
+    ulysses_pad,
+)
 from lmms_engine.utils import Logging, TrainUtilities
 
+from ..sequence_packing_utils import _unpad_input
 from ..utils import calc_gpt_flops
 
 try:
@@ -129,11 +138,20 @@ def lce_forward(
 
     loss = None
     logits = None
+    # if we are using sequence parallel, we need to slice the hidden states and labels
+    labels_unpad = labels.view(-1)[word_idx.long()]
+    if get_ulysses_sequence_parallel_world_size() > 1:
+        seq_lens = (
+            calculate_seq_len_per_rank(seq_lens.tolist())
+            if seq_lens is not None
+            else None
+        )
+        labels_unpad = slice_input_tensor(labels_unpad, dim=0, padding=True)
+    labels = labels_unpad
 
     # if in training mode, don't materialize logits
     if labels is not None:
         if use_rmpad:
-            labels = labels.view(-1)[word_idx.long()]
             # We need to shift the tokens according to seq lens
             # Otherwise, the first labels of the next seq will be the last labels of the current seq
             shift_hidden_states = []
