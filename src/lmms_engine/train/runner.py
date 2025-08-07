@@ -17,6 +17,7 @@ from lmms_engine.mapping_func import (
     create_model_from_config,
     create_model_from_pretrained,
 )
+from lmms_engine.models.utils import setup_flops_counter
 from lmms_engine.parallel.sequence_parallel.ulysses import (
     set_ulysses_sequence_parallel_group,
 )
@@ -90,6 +91,7 @@ class TrainRunner:
                 setattr(model.config, key, value)
                 Logging.info(f"Overwrite {key} to {value}")
 
+        setup_flops_counter(model.config)
         Logging.info(f"Model Structure: {model}")
         Logging.info(
             f"Model size: {sum(p.numel() for p in model.parameters()) / 1e9} GB"

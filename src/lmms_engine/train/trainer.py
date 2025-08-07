@@ -30,6 +30,7 @@ from transformers.trainer_pt_utils import (
 from transformers.trainer_utils import has_length, seed_worker
 from transformers.utils import is_datasets_available, is_peft_available
 
+import lmms_engine.models.utils as model_utils
 import lmms_engine.parallel.process_group_manager as pgm
 from lmms_engine.parallel.sequence_parallel.ulysses import (
     get_ulysses_sequence_parallel_world_size,
@@ -353,15 +354,15 @@ class Trainer(HFTrainer):
         if self.state.global_step == 0 or getattr(self, "cur_time", None) is None:
             self.cur_time = time.perf_counter()
             self.mfu = 0.0
-            self.flops = 0
-        if (
-            self.state.global_step % 10 == 0
-            and self.flops > 0  # No flops logging for this model
-        ):
+            self.total_seq_len = []
+        if self.state.global_step % 10 == 0 and self.state.global_step > 0:
             prev_time = self.cur_time
             self.cur_time = time.perf_counter()
             device = self.args.local_rank
-            flops_tensor = torch.tensor(self.flops, device=device)
+            flops, promised_flops = model_utils.flops_counter.estimate_flops(
+                self.total_seq_len, delta_time=self.cur_time - prev_time
+            )
+            flops_tensor = torch.tensor(flops, device=device)
             torch.distributed.all_reduce(
                 flops_tensor, op=torch.distributed.ReduceOp.SUM
             )
@@ -369,14 +370,20 @@ class Trainer(HFTrainer):
             # Thus the mfu is within every dp group
             sp_size = pgm.process_group_manager.cp_world_size
             self.mfu = (
-                flops_tensor.item()
-                / (self.cur_time - prev_time)
-                / self.args.world_size
-                / sp_size
-                / TrainUtilities.get_device_flops("B")
+                flops_tensor.item() / self.args.world_size / sp_size / promised_flops
             )
             self.log({"mfu": round(self.mfu, 2)})
             self.flops = 0
+            self.total_seq_len.clear()
+
+        # Calculate the total number of tokens, sum at the row dimension
+        self.total_seq_len.extend(
+            inputs.get("attention_mask", torch.tensor(0))
+            .sum(dim=1)
+            .detach()
+            .cpu()
+            .tolist()
+        )
         loss, outputs = super().compute_loss(
             model=model,
             inputs=inputs,
@@ -385,5 +392,4 @@ class Trainer(HFTrainer):
         )
         # Hf avg across every process, we scale the loss first such that the mean is over dp group
         loss = loss * get_ulysses_sequence_parallel_world_size()
-        self.flops += outputs.get("flops", 0)
         return (loss, outputs) if return_outputs else loss

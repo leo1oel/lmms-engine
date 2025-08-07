@@ -1,29 +1,16 @@
-from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import torch
-from packaging import version
-from torch.nn import CrossEntropyLoss
-from transformers import Qwen2_5_VLConfig, Qwen2_5_VLForConditionalGeneration
-from transformers import __version__ as transformers_version
-from transformers.modeling_outputs import ModelOutput
-from transformers.utils import (
-    add_start_docstrings_to_model_forward,
-    replace_return_docstrings,
+from transformers import Qwen2_5_VLForConditionalGeneration
+from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
+    Qwen2_5_VLCausalLMOutputWithPast,
 )
 
 from lmms_engine.parallel.sequence_parallel.ulysses import (
     calculate_seq_len_per_rank,
-    get_ulysses_sequence_parallel_group,
-    get_ulysses_sequence_parallel_rank,
     get_ulysses_sequence_parallel_world_size,
     slice_input_tensor,
-    ulysses_pad,
 )
-from lmms_engine.utils import Logging, TrainUtilities
-
-from ..sequence_packing_utils import _unpad_input
-from ..utils import calc_gpt_flops
 
 try:
     from liger_kernel.transformers.fused_linear_cross_entropy import (
@@ -31,42 +18,6 @@ try:
     )
 except:
     print("Liger Kernel is not installed, pip install liger-kernel to use this patch")
-
-
-def calc_qwenvl_flops(
-    config: Qwen2_5_VLConfig, tokens_count: int, num_visual_tokens: int
-):
-    lm_flops = TrainUtilities.get_decoder_flops(
-        num_layers=config.text_config.num_hidden_layers,
-        hidden_size=config.text_config.hidden_size,
-        vocab_size=config.text_config.vocab_size,
-        seq_len=tokens_count,
-        ffn_hidden_size=config.text_config.intermediate_size,
-        num_key_value_heads=config.text_config.num_key_value_heads,
-        num_heads=config.text_config.num_attention_heads,
-        batch_size=1,
-    )
-    vision_encoder_flops = TrainUtilities.get_attn_flops(
-        num_layers=config.vision_config.depth,
-        hidden_size=config.vision_config.hidden_size,
-        num_heads=config.vision_config.num_heads,
-        seq_len=num_visual_tokens,
-        num_key_value_heads=None,
-        ffn_hidden_size=config.vision_config.intermediate_size,
-    )
-    flops = lm_flops + vision_encoder_flops
-    return flops
-
-
-@dataclass
-class Qwen2_5_VLCausalLMOutputWithPast(ModelOutput):
-    loss: Optional[torch.FloatTensor] = None
-    logits: torch.FloatTensor = None
-    past_key_values: Optional[List[torch.FloatTensor]] = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
-    rope_deltas: Optional[torch.LongTensor] = None
-    flops: Optional[float] = None
 
 
 def lce_forward(
@@ -111,7 +62,6 @@ def lce_forward(
     n_video_tokens = (input_ids == self.config.video_token_id).sum().item()
     visual_tokens = n_image_tokens + n_video_tokens
 
-    flops = calc_qwenvl_flops(self.config, tokens_count, visual_tokens)
     outputs = self.model(
         input_ids=input_ids,
         pixel_values=pixel_values,
@@ -203,5 +153,4 @@ def lce_forward(
         hidden_states=outputs.hidden_states,
         attentions=outputs.attentions,
         rope_deltas=rope_deltas,
-        flops=flops,
     )
