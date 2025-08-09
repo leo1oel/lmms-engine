@@ -29,6 +29,7 @@ from ..models.monkey_patch import (
 from ..utils import Logging
 from ..utils.train_utils import TrainUtilities
 from .config import TrainerConfig
+from .fsdp2_trainer import FSDP2SFTTrainer
 from .trainer import Trainer
 
 
@@ -228,7 +229,16 @@ class TrainRunner:
         set_ulysses_sequence_parallel_group(pgm.process_group_manager.cp_group)
 
     def _build_trainer(self):
-        trainer = Trainer(
+        if self.config.trainer_type == "hf_trainer":
+            trainer_cls = Trainer
+        elif self.config.trainer_type == "fsdp2_trainer":
+            trainer_cls = FSDP2SFTTrainer
+        else:
+            raise ValueError(
+                f"Unsupported trainer backend: {self.config.trainer_args.trainer_backend}"
+            )
+
+        trainer = trainer_cls(
             model=self.model,
             args=self.config.trainer_args,
             data_collator=self.train_dataset.get_collator(),
