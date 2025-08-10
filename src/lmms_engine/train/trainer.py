@@ -191,7 +191,14 @@ class Trainer(HFTrainer):
             )
 
         else:
-            return RandomSampler(self.train_dataset)
+            if self.args.sp_ulysses_degree > 1:
+                return DistributedSampler(
+                    self.train_dataset,
+                    num_replicas=pgm.process_group_manager.dp_world_size,
+                    rank=pgm.process_group_manager.dp_rank,
+                )
+            else:
+                return RandomSampler(self.train_dataset)
 
     def _get_dataloader(
         self,
