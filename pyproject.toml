@@ -40,6 +40,7 @@ dependencies = [
     "torch",
     "torchvision",
     "pyyaml",
+    "wandb",
     "torchdata",
 ]
 
@@ -77,5 +78,5 @@ lmms_launch="lmms_engine.launch.cli:main"
 
 
 [project.urls]
-Homepage = "https://lmms-lab.framer.ai/"
+Homepage = "https://lmms-lab.com/"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms_engine"

@@ -30,7 +30,7 @@ def create_train_task(config):
     global_rank = int(os.environ["RANK"])
     world_size = int(os.environ["WORLD_SIZE"])
 
-    sp_degree = config["sp_ulysses_degree"]
+    sp_degree = config.get("sp_ulysses_degree", 1)
     dp_size = world_size // sp_degree
 
     # For now, we haven't implement the tp and pp

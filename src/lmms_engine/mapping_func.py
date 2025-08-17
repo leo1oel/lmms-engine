@@ -10,11 +10,6 @@ DATASET_MAPPING = {}
 DATAPROCESSOR_MAPPING = {}
 from lmms_engine.utils import Logging
 
-try:
-    import fla
-except ImportError as e:
-    Logging.warning(f"Failed to import fla.")
-
 
 # A decorator class to register processors
 def register_processor(processor_type: str):
