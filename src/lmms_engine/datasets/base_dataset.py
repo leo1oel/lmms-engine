@@ -296,20 +296,20 @@ class BaseDataset(Dataset):
             if self.config.dataset_format == "yaml":
                 self.data_folder = [self.data_folder[i] for i in data_index]
 
+        if isinstance(self.data_list, HFDataset):
+            self.data_lengths = self.data_list.map(
+                lambda x: {"length": self.estimate_data_tokens_per_row(x)},
+                num_proc=cpu_count() // 2,
+            ).select_columns("length")
+            self.data_lengths = self.data_lengths.to_list()
+            self.data_lengths = [da["length"] for da in self.data_lengths]
+        else:
+            self.data_lengths = (
+                self._estimate_data_tokens(self.data_list)
+                if self.config.dataset_format != "hf_dataset"
+                else self.data_list_no_image
+            )
         if self.config.packing:
-            if isinstance(self.data_list, HFDataset):
-                self.data_lengths = self.data_list.map(
-                    lambda x: {"length": self.estimate_data_tokens_per_row(x)},
-                    num_proc=cpu_count() // 2,
-                ).select_columns("length")
-                self.data_lengths = self.data_lengths.to_list()
-                self.data_lengths = [da["length"] for da in self.data_lengths]
-            else:
-                self.data_lengths = (
-                    self._estimate_data_tokens(self.data_list)
-                    if self.config.dataset_format != "hf_dataset"
-                    else self.data_list_no_image
-                )
             self.filter_overlong()
             if self.config.packing_strategy is None:
                 raise ValueError("Packing strategy is not specified.")
