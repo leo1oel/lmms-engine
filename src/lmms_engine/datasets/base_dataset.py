@@ -59,34 +59,7 @@ class BaseDataset(Dataset):
         super().__init__()
         self.processor_config = config.processor_config
         if isinstance(self.processor_config, dict):
-            # Extract only the fields that ProcessorConfig accepts
-            processor_config_dict = {}
-            valid_fields = {
-                "processor_name",
-                "processor_type",
-                "max_pixels",
-                "min_pixels",
-            }
-
-            for key, value in self.processor_config.items():
-                if key in valid_fields:
-                    processor_config_dict[key] = value
-
-            # Set processor_name to processor_type if not provided
-            if (
-                "processor_name" not in processor_config_dict
-                and "processor_type" in processor_config_dict
-            ):
-                processor_config_dict["processor_name"] = processor_config_dict[
-                    "processor_type"
-                ]
-
-            # Store the full config dict for the processor to use
-            self.full_processor_config = config.processor_config
-            self.processor_config = ProcessorConfig(**processor_config_dict)
-        else:
-            # If it's already a ProcessorConfig object, no need for full_processor_config
-            self.full_processor_config = None
+            self.processor_config = ProcessorConfig(**self.processor_config)
         self.config = config
         if self.config.object_storage == "gcs":
             self.storage_client = Client()
@@ -99,9 +72,7 @@ class BaseDataset(Dataset):
 
     def _build_processor(self):
         processor_cls = DATAPROCESSOR_MAPPING[self.processor_config.processor_type]
-        # Pass the full config dict if available, otherwise fall back to processor_config
-        config_to_pass = getattr(self, "full_processor_config", self.processor_config)
-        processor = processor_cls(config_to_pass)
+        processor = processor_cls(self.processor_config)
         return processor
 
     def build(self):
@@ -250,7 +221,8 @@ class BaseDataset(Dataset):
         }
         if self.config.video_sampling_strategy == "frame_num":
             video_dict.pop("fps", None)
-        video_dict.pop("max_pixels")  # without it, the demo of wan training will fail
+
+        video_dict.pop("max_pixels", None)
         frames, sample_fps = fetch_video(video_dict, return_video_sample_fps=True)
         frames = frames.numpy()
         return frames, sample_fps
@@ -287,8 +259,6 @@ class BaseDataset(Dataset):
             self.data_list = DataUtilities.load_json(self.config.dataset_path)
         elif self.config.dataset_format == "jsonl":
             self.data_list = DataUtilities.load_jsonlines(self.config.dataset_path)
-        elif self.config.dataset_format == "csv":
-            self.data_list = DataUtilities.load_csv(self.config.dataset_path)
         elif self.config.dataset_format == "arrow":
             self.data_list = load_from_disk(self.config.dataset_path)
         elif self.config.dataset_format == "parquet":
@@ -315,7 +285,6 @@ class BaseDataset(Dataset):
                 )
         else:
             raise NotImplementedError
-
         if self.config.shuffle:
             Logging.info("Shuffle Dataset ...")
             data_index = [i for i in range(len(self.data_list))]
@@ -328,7 +297,6 @@ class BaseDataset(Dataset):
                 self.data_folder = [self.data_folder[i] for i in data_index]
 
         if self.config.packing:
-            # this block which tries to get the data_lengths seems only useful for packing? so I move this part under the cndito
             if isinstance(self.data_list, HFDataset):
                 self.data_lengths = self.data_list.map(
                     lambda x: {"length": self.estimate_data_tokens_per_row(x)},
@@ -362,13 +330,7 @@ class BaseDataset(Dataset):
             )
 
     def estimate_data_tokens_per_row(self, row):
-        # Try different column names for message data
-        messages = None
-        for col_name in ["messages", "prompt"]:
-            if col_name in row:
-                messages = row[col_name]
-                break
-        # Handle structured messages format
+        messages = row["messages"]
         cur_len = 0
         for message in messages:
             content = message["content"]
@@ -446,13 +408,11 @@ class BaseDataset(Dataset):
     ):
         max_length = packing_length
         Logging.info(f"Packing inputs...pack length:{max_length}")
-
         result = []
         current_concatenated_length = 0
         current_list = []
         i = 0
         cur_window = {}
-
         next_window = {}
         for k in range(window_size):
             next_window[f"{k}"] = lengths[k]
@@ -526,8 +486,6 @@ class BaseDataset(Dataset):
             or self.config.dataset_format == "arrow"
         ):
             data_dict = self.load_from_json(self.data_list[index])
-        elif self.config.dataset_format == "csv":
-            data_dict = self.load_from_csv(self.data_list[index])
         elif self.config.dataset_format == "yaml":
             data_dict = self.load_from_json(
                 self.data_list[index], self.data_folder[index]
@@ -546,10 +504,6 @@ class BaseDataset(Dataset):
             data_dict_list = [
                 self.load_from_json(self.data_list[index]) for index in index_group
             ]
-        elif self.config.dataset_format == "csv":
-            data_dict_list = [
-                self.load_from_csv(self.data_list[index]) for index in index_group
-            ]
         elif self.config.dataset_format == "yaml":
             data_dict_list = [
                 self.load_from_json(self.data_list[index], self.data_folder[index])
@@ -566,10 +520,6 @@ class BaseDataset(Dataset):
     @abstractmethod
     def load_from_json(self, data, data_folder=None):
         pass
-
-    def load_from_csv(self, data, data_folder=None):
-        """Load from CSV data. Default implementation just calls load_from_json."""
-        return self.load_from_json(data, data_folder)
 
     @abstractmethod
     def load_from_hf(self, data):
