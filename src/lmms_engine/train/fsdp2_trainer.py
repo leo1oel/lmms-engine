@@ -1,3 +1,4 @@
+import gc
 import os
 import random
 import shutil
@@ -259,7 +260,8 @@ class FSDP2SFTTrainer:
             # if the checkpoint is loaded, we need to update the pbar
             # but we only need to update the pbar once
             if need_update_pbar:
-                pbar.update(self.global_step)
+                update_step = self.global_step % self.steps_per_epoch
+                pbar.update(update_step)
                 need_update_pbar = False
             for step, batch in enumerate(self.train_dataloader):
                 # send batch to device
@@ -295,7 +297,7 @@ class FSDP2SFTTrainer:
                 epoch_progress = f"{self.global_step / self.steps_per_epoch:.2f}"
                 train_metrics["epoch"] = float(epoch_progress)
                 if rank == 0:
-                    self.tracking.log(train_metrics)
+                    self.tracking.log(train_metrics, step=self.global_step)
                 self.global_step += 1
                 if self.should_save:
                     output_dir = os.path.join(
@@ -308,6 +310,12 @@ class FSDP2SFTTrainer:
                     )
                 if self.global_step >= self.args.max_steps and self.args.max_steps > 0:
                     break
+
+                if (
+                    self.args.torch_empty_cache_steps is not None
+                    and self.global_step % self.args.torch_empty_cache_steps == 0
+                ):
+                    self.empty_cache()
                 pbar.update(1)
             pbar.close()
 
@@ -442,3 +450,7 @@ class FSDP2SFTTrainer:
         torch.set_rng_state(rng_state["cpu"])
         np.random.set_state(rng_state["numpy"])
         random.setstate(rng_state["random"])
+
+    def empty_cache(self):
+        gc.collect()
+        torch.cuda.empty_cache()
