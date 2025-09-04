@@ -27,6 +27,8 @@ class DatasetConfig(Args):
     packing_strategy: Optional[str] = None
     packing_length: Optional[int] = 32000
     filter_overlong: Optional[bool] = True
+    filter_overlong_workers: Optional[int] = 8
+    max_length: Optional[int] = None
 
     # Video configuration
     video_sampling_strategy: Optional[Literal["fps", "frame_num"]] = "fps"
@@ -37,7 +39,13 @@ class DatasetConfig(Args):
     video_backend: Optional[Literal["decord", "qwen_vl_utils"]] = "qwen_vl_utils"
 
     @field_validator(
-        "video_max_pixels", "video_max_frames", "frame_num", "fps", "packing_length"
+        "video_max_pixels",
+        "video_max_frames",
+        "frame_num",
+        "fps",
+        "packing_length",
+        "max_length",
+        "filter_overlong_workers",
     )
     @classmethod
     def validate_positive_values(cls, v, info):

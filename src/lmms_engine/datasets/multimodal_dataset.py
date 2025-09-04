@@ -249,12 +249,18 @@ class MultiModalDataset(BaseDataset):
 
     def filter_overlong(self):
         """Filter out data samples that are too long for packing."""
-        if self.config.packing and self.config.filter_overlong:
-            Logging.info(
-                f"Filter overlong data, max length: {self.config.packing_length}"
+        if self.config.filter_overlong:
+            if not self.config.packing and self.config.max_length is None:
+                # If not packing and max length is not specified, we don't need to filter overlong
+                return
+            max_length = (
+                self.config.max_length
+                if self.config.max_length is not None
+                else self.config.packing_length
             )
+            Logging.info(f"Filter overlong data, max length: {max_length}")
             original_length = len(self.data_list)
-            seq_len = self.config.packing_length
+            seq_len = max_length
             overlong_indices = [
                 i for i, length in enumerate(self.data_lengths) if length > seq_len
             ]
@@ -322,7 +328,7 @@ class MultiModalDataset(BaseDataset):
         if isinstance(self.data_list, HFDataset):
             self.data_lengths = self.data_list.map(
                 lambda x: {"length": self.estimate_data_tokens_per_row(x)},
-                num_proc=cpu_count() // 2,
+                num_proc=self.config.filter_overlong_workers,
             ).select_columns("length")
             self.data_lengths = self.data_lengths.to_list()
             self.data_lengths = [da["length"] for da in self.data_lengths]
@@ -332,9 +338,9 @@ class MultiModalDataset(BaseDataset):
                 if self.config.dataset_format != "hf_dataset"
                 else self.data_list_no_image
             )
+        self.filter_overlong()
 
         if self.config.packing:
-            self.filter_overlong()
             if self.config.packing_strategy is None:
                 raise ValueError("Packing strategy is not specified.")
             packing_length = self.config.packing_length
