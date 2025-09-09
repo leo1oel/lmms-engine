@@ -4,6 +4,7 @@ import random
 import shutil
 import time
 from functools import partial
+from typing import Union
 
 import numpy as np
 import torch
@@ -11,7 +12,7 @@ import torch.distributed as dist
 import torch.nn as nn
 from accelerate.utils import send_to_device
 from torch.distributed.fsdp import MixedPrecisionPolicy
-from torch.utils.data import Dataset, DistributedSampler
+from torch.utils.data import Dataset, DistributedSampler, IterableDataset
 from torchdata.stateful_dataloader import StatefulDataLoader
 from tqdm import tqdm
 from transformers.trainer_pt_utils import DistributedLengthGroupedSampler
@@ -25,12 +26,15 @@ from lmms_engine.utils.fsdp2_utils import (
     apply_fsdp2,
     fsdp2_clip_grad_norm_,
     fsdp2_load_full_state_dict,
+    get_constant_schedule,
     get_cosine_schedule_with_warmup,
     get_wsd_schedule_with_warmup,
 )
 from lmms_engine.utils.logging_utils import Logging
 from lmms_engine.utils.profiler import StepProfiler
 from lmms_engine.utils.tracking import Tracking
+
+DatasetType = Union[Dataset, IterableDataset]
 
 
 @TRAINER_REGISTER.register("fsdp2_trainer")
@@ -39,8 +43,8 @@ class FSDP2SFTTrainer:
         self,
         model: nn.Module,
         args: TrainingArguments,
-        train_dataset: Dataset,
-        eval_dataset: Dataset = None,
+        train_dataset: DatasetType,
+        eval_dataset: DatasetType = None,
         processing_class=None,
         data_collator=None,
     ) -> None:
@@ -66,7 +70,7 @@ class FSDP2SFTTrainer:
             rank=dist.get_rank(),
         )
 
-    def prepare_dataloader(self, dataset: Dataset, is_training: bool = True):
+    def prepare_dataloader(self, dataset: DatasetType, is_training: bool = True):
         data_collator = self.data_collator
         dataloader_params = {
             "batch_size": self.args.train_batch_size,
@@ -76,7 +80,9 @@ class FSDP2SFTTrainer:
             "persistent_workers": self.args.dataloader_persistent_workers,
         }
 
-        if self.args.group_by_length:
+        if isinstance(dataset, IterableDataset):
+            sampler = None
+        elif self.args.group_by_length:
             sampler = DistributedLengthGroupedSampler(
                 self.args.train_batch_size * self.args.gradient_accumulation_steps,
                 dataset=dataset,
@@ -154,17 +160,25 @@ class FSDP2SFTTrainer:
         num_warmup_steps: int,
         num_training_steps: int,
     ):
-        if self.args.lr_scheduler_type:
+        if self.args.lr_scheduler_type == "cosine":
             self.scheduler = get_cosine_schedule_with_warmup(
                 self.optimizer,
                 num_warmup_steps=num_warmup_steps,
                 num_training_steps=num_training_steps,
+                **self.args.lr_scheduler_kwargs,
             )
         elif self.args.lr_scheduler_type == "wsd":
             self.scheduler = get_wsd_schedule_with_warmup(
                 self.optimizer,
                 num_warmup_steps=num_warmup_steps,
                 num_training_steps=num_training_steps,
+                **self.args.lr_scheduler_kwargs,
+            )
+        elif self.args.lr_scheduler_type == "constant":
+            self.scheduler = get_constant_schedule(
+                self.optimizer,
+                num_warmup_steps=num_warmup_steps,
+                **self.args.lr_scheduler_kwargs,
             )
         else:
             raise ValueError(
@@ -207,9 +221,9 @@ class FSDP2SFTTrainer:
         loss_item = torch.tensor(loss_item, device=self.args.device)
         torch.distributed.all_reduce(loss_item, op=torch.distributed.ReduceOp.AVG)
         return {
-            "loss": loss_item.item(),
-            "lr": lr,
-            "grad_norm": grad_norm.item(),
+            "train/loss": loss_item.item(),
+            "train/lr": lr,
+            "train/grad_norm": grad_norm.item(),
         }
 
     def validation_step(self):
@@ -222,8 +236,23 @@ class FSDP2SFTTrainer:
         if self.eval_dataset is not None:
             raise NotImplementedError("Evaluation is not implemented")
         self.prepare_optimizer()
-        self.steps_per_epoch = len(train_dataloader)
-        self.total_steps = self.steps_per_epoch * self.args.num_train_epochs
+
+        # For Dataset, we can calculate the steps per epoch
+        # For IterableDataset, we can't calculate the steps per epoch
+        # because the number of steps is not fixed, unless max_steps is set
+        if isinstance(self.train_dataset, IterableDataset):
+            self.steps_per_epoch = (
+                None if self.args.max_steps < 0 else self.args.max_steps
+            )
+            self.total_steps = None if self.args.max_steps < 0 else self.args.max_steps
+        else:
+            self.steps_per_epoch = len(train_dataloader)
+            self.total_steps = (
+                self.steps_per_epoch * self.args.num_train_epochs
+                if self.args.max_steps < 0
+                else self.args.max_steps
+            )
+
         warmup_steps = (
             int(self.total_steps * self.args.warmup_ratio)
             if self.args.warmup_ratio > 0
@@ -231,6 +260,7 @@ class FSDP2SFTTrainer:
         )
         self.prepare_scheduler(warmup_steps, self.total_steps)
         rank = dist.get_rank()
+        # Initialize tracking
         if rank == 0:
             self.tracking = Tracking(
                 project_name=os.environ.get("WANDB_PROJECT", "lmms-engine"),
@@ -252,20 +282,32 @@ class FSDP2SFTTrainer:
                 os.path.join(self.args.output_dir, latest_checkpoint),
                 int(latest_checkpoint.split("-")[1]),
             )
-            start_epoch = int(latest_checkpoint.split("-")[1]) / self.steps_per_epoch
-            # start_epoch is a float, we need to convert it to an integer
-            start_epoch = int(start_epoch)
+            # If max_steps is set, we need to calculate the start epoch
+            if self.steps_per_epoch is not None and self.steps_per_epoch > 0:
+                start_epoch = (
+                    int(latest_checkpoint.split("-")[1]) / self.steps_per_epoch
+                )
+                # start_epoch is a float, we need to convert it to an integer
+                start_epoch = int(start_epoch)
+            else:
+                Logging.warning(
+                    "IterableDataset is used but we can't determine the start epoch, set to 0"
+                )
+                start_epoch = 0
+                self.args.num_train_epochs = 1
             self.global_step = int(latest_checkpoint.split("-")[1])
             need_update_pbar = True
         else:
             start_epoch = 0
             self.global_step = 0
             need_update_pbar = False
+
         Logging.info(f"Training with {self.args.num_train_epochs} epochs")
         self.step_profiler.start()
 
         for epoch in range(start_epoch, self.args.num_train_epochs):
-            self.train_dataloader.sampler.set_epoch(epoch)
+            if hasattr(self.train_dataloader.sampler, "set_epoch"):
+                self.train_dataloader.sampler.set_epoch(epoch)
             pbar = tqdm(
                 total=self.steps_per_epoch,
                 desc=f"Epoch {epoch + 1}",
@@ -278,6 +320,8 @@ class FSDP2SFTTrainer:
                 pbar.update(update_step)
                 need_update_pbar = False
             for step, batch in enumerate(self.train_dataloader):
+                if self.global_step >= self.args.max_steps and self.args.max_steps > 0:
+                    break
                 # send batch to device
                 batch = send_to_device(batch, self.fsdp2_model.device)
                 start_time = time.perf_counter()
@@ -310,10 +354,30 @@ class FSDP2SFTTrainer:
                     / sp_size
                     / promised_flops
                 )
-                train_metrics["mfu"] = round(mfu, 2)
 
-                epoch_progress = f"{self.global_step / self.steps_per_epoch:.2f}"
-                train_metrics["epoch"] = float(epoch_progress)
+                # Calculating packing stats
+                seq_len = torch.tensor(seq_len, device=device, dtype=torch.float32)
+                global_seq_len_avg = seq_len.sum()
+                torch.distributed.all_reduce(
+                    global_seq_len_avg, op=torch.distributed.ReduceOp.AVG
+                )
+                train_metrics["perf/global_seq_len_avg"] = global_seq_len_avg.item()
+                global_seq_len_min = seq_len.sum()
+                torch.distributed.all_reduce(
+                    global_seq_len_min, op=torch.distributed.ReduceOp.MIN
+                )
+                train_metrics["perf/global_seq_len_min"] = global_seq_len_min.item()
+                global_seq_len_max = seq_len.sum()
+                torch.distributed.all_reduce(
+                    global_seq_len_max, op=torch.distributed.ReduceOp.MAX
+                )
+                train_metrics["perf/global_seq_len_max"] = global_seq_len_max.item()
+
+                train_metrics["train/mfu"] = round(mfu, 2)
+
+                if self.steps_per_epoch is not None:
+                    epoch_progress = f"{self.global_step / self.steps_per_epoch:.2f}"
+                    train_metrics["train/epoch"] = float(epoch_progress)
                 if rank == 0:
                     self.tracking.log(train_metrics, step=self.global_step)
                 self.global_step += 1
@@ -326,8 +390,6 @@ class FSDP2SFTTrainer:
                         self.global_step,
                         total_limit=self.args.save_total_limit,
                     )
-                if self.global_step >= self.args.max_steps and self.args.max_steps > 0:
-                    break
 
                 if (
                     self.args.torch_empty_cache_steps is not None

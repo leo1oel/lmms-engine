@@ -1,19 +1,19 @@
 import os
-from copy import deepcopy
 from typing import Dict
 
 import torch
 from PIL import Image
 
+from lmms_engine.datasets.collator import VisionCollator
+from lmms_engine.datasets.iterable.multimodal_iterable_dataset import (
+    MultiModalIterableDataset,
+)
 from lmms_engine.mapping_func import register_dataset
-
-from ..utils.train_utils import TrainUtilities
-from .collator import VisionCollator
-from .multimodal_dataset import MultiModalDataset
+from lmms_engine.utils.train_utils import TrainUtilities
 
 
-@register_dataset("vision")
-class VisionSFTDataset(MultiModalDataset):
+@register_dataset("vision_iterable")
+class VisionSFTIterableDataset(MultiModalIterableDataset):
     def load_from_csv(self, data, data_folder=None) -> Dict[str, torch.Tensor]:
         """Load from CSV data directly without intermediate transformation."""
         images_list = []
