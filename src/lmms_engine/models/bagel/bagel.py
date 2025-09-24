@@ -18,7 +18,7 @@ from tqdm import tqdm
 from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_utils import PreTrainedModel
 
-from .autoencoder import AutoEncoderParams, load_ae
+from .autoencoder import AutoEncoder, AutoEncoderParams, load_ae
 from .cache_utils import cache_init
 from .data_utils import (
     create_sparse_mask,
@@ -71,6 +71,11 @@ class BagelConfig(PretrainedConfig):
         self.ce_loss_reweighting = ce_loss_reweighting
         self.vit_select_layer = vit_select_layer
         self.vit_rope = vit_rope
+
+        if llm_config is not None:
+            self.llm_config = Qwen2Config.from_dict(llm_config)
+        if vit_config is not None:
+            self.vit_config = SiglipVisionConfig.from_dict(vit_config)
 
     def to_dict(self):
         output = super().to_dict()
@@ -128,8 +133,31 @@ class Bagel(PreTrainedModel):
     _supports_sdpa = True
     _supports_flash_attn = True
 
-    def __init__(self, language_model, vit_model, vae_model, config: BagelConfig):
+    def __init__(self, config: BagelConfig, *args, **kwargs):
         super().__init__(config)
+        if kwargs == {}:
+            self._init_from_hf_weights(config)
+        else:
+            self._init_from_original_weights(
+                kwargs["language_model"],
+                kwargs["vit_model"],
+                kwargs["vae_model"],
+                config,
+            )
+
+    def _init_from_hf_weights(self, config: BagelConfig):
+        language_model = Qwen2ForCausalLM(config.llm_config)
+        vit_model = SiglipVisionModel(config.vit_config)
+        vae_model = AutoEncoder(config.vae_config)
+        if config.visual_und:
+            vit_model.vision_model.embeddings.convert_conv2d_to_linear(
+                config.vit_config, meta=True
+            )
+        self._init_from_original_weights(language_model, vit_model, vae_model, config)
+
+    def _init_from_original_weights(
+        self, language_model, vit_model, vae_model, config: BagelConfig
+    ):
         self.language_model = language_model
         self.hidden_size = config.llm_config.hidden_size
         self.use_moe = "Mo" in config.llm_config.layer_module
@@ -1356,6 +1384,11 @@ class Bagel(PreTrainedModel):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, config, *args, **kwargs):
+        ema_path = os.path.join(pretrained_model_name_or_path, "ema.safetensors")
+        if not os.path.exists(ema_path):
+            return super().from_pretrained(
+                pretrained_model_name_or_path, config, *args, **kwargs
+            )
         training_config = kwargs.get("training_config", {})
         for k, v in training_config.items():
             if hasattr(config, k):
@@ -1396,7 +1429,12 @@ class Bagel(PreTrainedModel):
         with init_empty_weights():
             language_model = Qwen2ForCausalLM(llm_config)
             vit_model = SiglipVisionModel(vit_config)
-            model = Bagel(language_model, vit_model, vae_model, bagel_config)
+            kwargs = {
+                "language_model": language_model,
+                "vit_model": vit_model,
+                "vae_model": vae_model,
+            }
+            model = Bagel(bagel_config, **kwargs)
             if bagel_config.visual_und:
                 model.vit_model.vision_model.embeddings.convert_conv2d_to_linear(
                     vit_config, meta=True
