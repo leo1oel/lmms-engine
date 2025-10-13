@@ -22,9 +22,11 @@ BAGEL integrates:
 
 An example dataset is available on `https://huggingface.co/datasets/kcz358/bagel-example`
 
-### 2. Ovewrite config
+### 2. Ovewrite config or load from converted weight
 
 Since the original Bagel config is not hf compatible and can't be used in AutoConfig, we prepare a config here `https://huggingface.co/kcz358/bagel_hf/blob/main/config.json`. Please overwrite this json file to the original `config.json` in the Bagel model path
+
+You can also load from `https://huggingface.co/lmms-lab/BAGEL-7B-MoT-ver.LE` which we converted bagel into hf safetensor weight. The weight are the same with the original weights.
 
 ### 3. Configure Training
 
@@ -67,7 +69,7 @@ Create a YAML configuration file based on the template above, adjusting:
     # Model configuration
     model_config:
       load_from_pretrained_path: "your-model-checkpoint-path"
-      attn_implementation: "eager"  # or "flash_attention_2"
+      attn_implementation: "eager"  # or "sdpa"
       extra_kwargs:
         visual_und: false  # Enable/disable visual understanding
       # Optional: Enable Native Sparse Attention
