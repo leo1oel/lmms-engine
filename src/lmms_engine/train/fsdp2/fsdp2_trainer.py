@@ -252,8 +252,8 @@ class FSDP2SFTTrainer:
         # Initialize tracking
         if rank == 0:
             self.tracking = Tracking(
-                project_name=os.environ.get("WANDB_PROJECT", "lmms-engine"),
-                experiment_name=self.args.run_name,
+                project_name=os.environ.get("WANDB_PROJECT", self.args.project),
+                experiment_name=os.environ.get("WANDB_NAME", self.args.run_name),
                 default_backend=self.default_backend,
                 config=self.args,
             )
@@ -319,7 +319,7 @@ class FSDP2SFTTrainer:
 
                 # Calculate flops per rank
                 seq_len = (
-                    batch.get("attention_mask", torch.tensor(0))
+                    batch.get("attention_mask", torch.zeros((1, 1)))
                     .sum(dim=1)
                     .detach()
                     .cpu()

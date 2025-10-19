@@ -29,6 +29,7 @@ VALID_CONFIG_TYPE = {
     "qwen3",
     "qwen3_dllm",
     "qwen3_moe",
+    "qwen3_vl",
     "deepseek_v3",
     "minicpmv",
     "minicpmo",
@@ -61,14 +62,16 @@ class FlopsCounter:
             "qwen3": self._estimate_qwen2_flops,
             "qwen3_dllm": self._estimate_qwen2_flops,
             "qwen3_moe": self._estimate_qwen2_moe_flops,
+            "qwen3_vl": self._estimate_qwen2_flops,
             "deepseek_v3": self._estimate_deepseek_v3_flops,
             "minicpmv": self._estimate_qwen2_flops,
             "minicpmo": self._estimate_qwen2_flops,
             "llava_onevision": self._estimate_qwen2_flops,
             "bagel": self._estimate_qwen2_flops,
         }
-        if config.model_type == "llava_onevision":
+        if config.model_type in ["llava_onevision", "qwen3_vl"]:
             self.config = config.text_config
+            self.config.model_type = config.model_type
         elif config.model_type == "bagel":
             self.config = config.llm_config
         else:
@@ -239,6 +242,15 @@ class FlopsCounter:
             estimated_flops (float): The estimated FLOPS based on the input tokens and time.
             promised_flops (float): The expected FLOPS of the current device.
         """
+        # Flatten batch_seqlens if it contains nested lists (common for vision models)
+        if isinstance(batch_seqlens, (list, tuple)):
+            flat_seqlens = []
+            for item in batch_seqlens:
+                if isinstance(item, (list, tuple)):
+                    flat_seqlens.extend(item)
+                else:
+                    flat_seqlens.append(item)
+            batch_seqlens = flat_seqlens
         tokens_sum = sum(batch_seqlens)
         func = self.estimate_func.get(
             self.config.model_type, self._estimate_unknown_flops
