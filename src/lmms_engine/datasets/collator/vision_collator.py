@@ -52,12 +52,19 @@ class VisionCollator:
         if "attention_mask" in inputs.keys():
             inputs.pop("attention_mask")
 
-        attention_mask = input_ids.ne(self.processor.tokenizer.pad_token_id)
+        attention_mask = input_ids.ne(self.processor.tokenizer.pad_token_id).long()
         batched_inputs["attention_mask"] = attention_mask
 
         # for the other keys
         for key, values in inputs.items():
-            batched_inputs[key] = torch.concatenate(values, dim=0)
+            # Handle scalar/boolean values ( use_audio_in_video)
+            if isinstance(values[0], bool) or (
+                isinstance(values[0], (int, float))
+                and not isinstance(values[0], torch.Tensor)
+            ):
+                batched_inputs[key] = values[0]
+            else:
+                batched_inputs[key] = torch.concatenate(values, dim=0)
         return batched_inputs
 
     @property

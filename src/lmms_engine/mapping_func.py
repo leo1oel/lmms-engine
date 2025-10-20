@@ -61,13 +61,14 @@ def register_model(
         "causal_lm", "masked_lm", "image_text_to_text", "general"
     ] = "causal_lm",
 ):
-    AutoConfig.register(model_type, model_config)
+    AutoConfig.register(model_type, model_config, exist_ok=True)
     AUTO_REGISTER_MODEL_MAPPING[model_general_type].register(model_config, model_class)
 
 
 def create_model_from_pretrained(load_from_pretrained_path):
     # Handle both config object and model name/path
     config = AutoConfig.from_pretrained(load_from_pretrained_path)
+
     if type(config) in AutoModelForCausalLM._model_mapping.keys():
         model_class = AutoModelForCausalLM
     elif type(config) in AutoModelForImageTextToText._model_mapping.keys():

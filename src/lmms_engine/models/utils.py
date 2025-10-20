@@ -26,6 +26,8 @@ VALID_CONFIG_TYPE = {
     "qwen2",
     "qwen2_vl",
     "qwen2_5_vl",
+    "qwen2_5_omni",
+    "qwen2_5_omni_thinker",
     "qwen3",
     "qwen3_dllm",
     "qwen3_moe",
@@ -59,6 +61,8 @@ class FlopsCounter:
             "qwen2_moe": self._estimate_qwen2_moe_flops,
             "qwen2_vl": self._estimate_qwen2_flops,
             "qwen2_5_vl": self._estimate_qwen2_flops,
+            "qwen2_5_omni": self._estimate_qwen2_flops,
+            "qwen2_5_omni_thinker": self._estimate_qwen2_flops,
             "qwen3": self._estimate_qwen2_flops,
             "qwen3_dllm": self._estimate_qwen2_flops,
             "qwen3_moe": self._estimate_qwen2_moe_flops,
@@ -71,6 +75,8 @@ class FlopsCounter:
         }
         if config.model_type in ["llava_onevision", "qwen3_vl"]:
             self.config = config.text_config
+        elif config.model_type in ("qwen2_5_omni", "qwen2_5_omni_thinker"):
+            self.config = config.text_config
             self.config.model_type = config.model_type
         elif config.model_type == "bagel":
             self.config = config.llm_config
@@ -81,17 +87,18 @@ class FlopsCounter:
         return 0
 
     def _estimate_qwen2_flops(self, tokens_sum, batch_seqlens, delta_time):
-        hidden_size = self.config.hidden_size
-        vocab_size = self.config.vocab_size
-        num_hidden_layers = self.config.num_hidden_layers
-        num_key_value_heads = self.config.num_key_value_heads
-        num_attention_heads = self.config.num_attention_heads
-        intermediate_size = self.config.intermediate_size
+        config = self.config
+        hidden_size = config.hidden_size
+        vocab_size = config.vocab_size
+        num_hidden_layers = config.num_hidden_layers
+        num_key_value_heads = config.num_key_value_heads
+        num_attention_heads = config.num_attention_heads
+        intermediate_size = config.intermediate_size
 
         head_dim = getattr(
-            self.config,
+            config,
             "head_dim",
-            self.config.hidden_size // self.config.num_attention_heads,
+            config.hidden_size // config.num_attention_heads,
         )
         q_size = num_attention_heads * head_dim
         k_size = num_key_value_heads * head_dim

@@ -37,7 +37,9 @@ class DatasetConfig(Args):
     video_min_pixels: Optional[int] = 3136
     frame_num: Optional[int] = 64
     fps: Optional[int] = 1
-    video_backend: Optional[Literal["decord", "qwen_vl_utils"]] = "qwen_vl_utils"
+    video_backend: Optional[
+        Literal["decord", "qwen_vl_utils", "qwen_omni_utils"]
+    ] = "qwen_vl_utils"
 
     @field_validator(
         "video_max_pixels",
@@ -63,7 +65,7 @@ class DatasetConfig(Args):
         if v == "torchvision":
             raise ValueError(
                 "The 'torchvision' video backend has been removed. "
-                "Please use 'decord' or 'qwen_vl_utils' instead. "
+                "Please use 'decord', 'qwen_vl_utils', or 'qwen_omni_utils' instead. "
                 "Migration guide: If you were using torchvision, 'decord' provides "
                 "similar functionality with better performance."
             )
