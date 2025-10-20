@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Training script for Qwen3-VL model.
+Training script for Qwen2.5 model.
 This script is designed to be launched by torchrun for multi-GPU training.
 """
 
@@ -12,7 +12,7 @@ from lmms_engine.launch.cli import create_train_task
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train Qwen3-VL model")
+    parser = argparse.ArgumentParser(description="Train Qwen2.5 model")
     parser.add_argument(
         "--output_dir", type=str, required=True, help="Output directory for training"
     )
@@ -32,7 +32,7 @@ def main():
     cfg = {
         "trainer_type": "fsdp2_trainer",
         "dataset_config": {
-            "dataset_type": "qwen3_vl_iterable",
+            "dataset_type": "vision_iterable",
             "dataset_format": "yaml",
             "datasets": [
                 {
@@ -42,14 +42,14 @@ def main():
                 }
             ],
             "processor_config": {
-                "processor_name": "Qwen/Qwen3-VL-4B-Instruct",
-                "processor_type": "qwen3_vl",
+                "processor_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "processor_type": "qwen2",
             },
             "packing": False,
             "video_backend": "qwen_vl_utils",
         },
         "model_config": {
-            "load_from_pretrained_path": "Qwen/Qwen3-VL-4B-Instruct",
+            "load_from_pretrained_path": "Qwen/Qwen2.5-1.5B-Instruct",
             "attn_implementation": "flash_attention_2",
         },
         "trainer_args": {
@@ -67,9 +67,9 @@ def main():
             "use_liger_kernel": True,
             "use_rmpad": True,
             "fsdp2": True,
-            "group_by_length": True,
+            "group_by_length": False,
             "fsdp_config": {
-                "transformer_layer_cls_to_wrap": ["Qwen3VLTextDecoderLayer"],
+                "transformer_layer_cls_to_wrap": ["Qwen2DecoderLayer"],
                 "reshard_after_forward": False,
             },
             "sp_ulysses_degree": 1,

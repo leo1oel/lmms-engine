@@ -32,13 +32,13 @@ def main():
     cfg = {
         "trainer_type": "fsdp2_trainer",
         "dataset_config": {
-            "dataset_type": "vision_iterable",
+            "dataset_type": "vision",
             "dataset_format": "yaml",
             "datasets": [
                 {
-                    "path": "data/open_thoughts_debug",
+                    "path": "data/lmms_engine_test/text_example/open_thoughts_5k.parquet",
                     "data_folder": "",
-                    "data_type": "arrow",
+                    "data_type": "parquet",
                 }
             ],
             "processor_config": {
@@ -67,13 +67,12 @@ def main():
             "use_liger_kernel": True,
             "use_rmpad": True,
             "fsdp2": True,
-            "group_by_length": False,
+            "group_by_length": True,
             "fsdp_config": {
                 "transformer_layer_cls_to_wrap": ["Qwen2DecoderLayer"],
                 "reshard_after_forward": False,
             },
-            "sp_ulysses_degree": 1,
-            "print_batch_input_steps": 5,
+            "sp_ulysses_degree": 2,
         },
     }
 

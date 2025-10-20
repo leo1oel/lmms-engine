@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Training script for Qwen2.5 model.
+Training script for Qwen3-VL model.
 This script is designed to be launched by torchrun for multi-GPU training.
 """
 
@@ -12,7 +12,7 @@ from lmms_engine.launch.cli import create_train_task
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train Qwen2.5 model")
+    parser = argparse.ArgumentParser(description="Train Qwen3-VL model")
     parser.add_argument(
         "--output_dir", type=str, required=True, help="Output directory for training"
     )
@@ -32,24 +32,24 @@ def main():
     cfg = {
         "trainer_type": "fsdp2_trainer",
         "dataset_config": {
-            "dataset_type": "vision",
+            "dataset_type": "vision_iterable",
             "dataset_format": "yaml",
             "datasets": [
                 {
-                    "path": "data/open_thoughts_debug",
+                    "path": "data/lmms_engine_test/text_example/open_thoughts_5k.parquet",
                     "data_folder": "",
-                    "data_type": "arrow",
+                    "data_type": "parquet",
                 }
             ],
             "processor_config": {
-                "processor_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "processor_type": "qwen2",
+                "processor_name": "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
+                "processor_type": "llava",
             },
             "packing": False,
             "video_backend": "qwen_vl_utils",
         },
         "model_config": {
-            "load_from_pretrained_path": "Qwen/Qwen2.5-1.5B-Instruct",
+            "load_from_pretrained_path": "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
             "attn_implementation": "flash_attention_2",
         },
         "trainer_args": {

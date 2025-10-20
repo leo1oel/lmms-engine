@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Training script for Qwen2.5-VL model.
+Training script for Qwen3-VL model.
 This script is designed to be launched by torchrun for multi-GPU training.
 """
 
@@ -12,7 +12,7 @@ from lmms_engine.launch.cli import create_train_task
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train Qwen2.5-VL model")
+    parser = argparse.ArgumentParser(description="Train Qwen3-VL model")
     parser.add_argument(
         "--output_dir", type=str, required=True, help="Output directory for training"
     )
@@ -32,24 +32,24 @@ def main():
     cfg = {
         "trainer_type": "fsdp2_trainer",
         "dataset_config": {
-            "dataset_type": "vision",
+            "dataset_type": "bagel_iterable",
             "dataset_format": "yaml",
             "datasets": [
                 {
-                    "path": "data/open_thoughts_debug",
-                    "data_folder": "",
-                    "data_type": "arrow",
+                    "path": "./data/lmms_engine_test/bagel_example/dataset_hf.parquet",
+                    "data_folder": "./data/lmms_engine_test/bagel_example",
+                    "data_type": "parquet",
                 }
             ],
             "processor_config": {
-                "processor_name": "Qwen/Qwen2.5-VL-3B-Instruct",
-                "processor_type": "qwen2_5_vl",
+                "processor_name": "lmms-lab/BAGEL-7B-MoT-ver.LE",
+                "processor_type": "bagel",
             },
             "packing": False,
             "video_backend": "qwen_vl_utils",
         },
         "model_config": {
-            "load_from_pretrained_path": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "load_from_pretrained_path": "lmms-lab/BAGEL-7B-MoT-ver.LE",
             "attn_implementation": "flash_attention_2",
         },
         "trainer_args": {
@@ -64,16 +64,15 @@ def main():
             "dataloader_num_workers": 8,
             "bf16": True,
             "lr_scheduler_type": "cosine",
-            "use_liger_kernel": True,
-            "use_rmpad": True,
+            "use_liger_kernel": False,
+            "use_rmpad": False,
             "fsdp2": True,
             "group_by_length": True,
             "fsdp_config": {
-                "transformer_layer_cls_to_wrap": ["Qwen2_5_VLDecoderLayer"],
+                "transformer_layer_cls_to_wrap": ["Qwen2MoTDecoderLayer"],
                 "reshard_after_forward": False,
             },
-            "sp_ulysses_degree": 2,
-            "print_batch_input_steps": 5,
+            "sp_ulysses_degree": 1,
         },
     }
 
