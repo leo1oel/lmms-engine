@@ -23,9 +23,9 @@ LMMs-Engine
 
 **LMMs Engine** is a highly efficient, modular training framework for training Unified Multimodal Models at scale.
 
-Train any multimodal model architectures including vision-language models (Qwen2.5/3-VL, LLaVA-OV), diffusion models (dLLM, WanVideo), unified multimodal models (Qwen2.5-Omni, BAGEL) and specialized research architectures (RAE, Gated DeltaNet, SiT). 
+Train any multimodal model architectures including language models (Qwen series), vision-language models (Qwen2.5/3-VL, LLaVA-OV), diffusion models (dLLM, WanVideo series), unified multimodal models (Qwen2.5-Omni, BAGEL) and specialized research architectures (RAE, Linear Attn, SiT). 
 
-Built with distributed training optimizations (FSDP2 Multi-dimensional Parallelism, Ulysses Sequence Parallel, Flash Attention 2, Liger Kernel, Muon optimizer, Native Sparse Attention) and a modular design for easy extensibility.
+Built with distributed training optimizations (FSDP2 Multi-dimensional Parallelism, Ulysses Sequence Parallel, Flash Attention, Liger Kernel, Muon optimizer, Native Sparse Attention) and a modular design for easy extensibility.
 
 ## 🚀 Quick Start
 
