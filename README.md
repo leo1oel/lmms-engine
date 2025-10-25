@@ -27,6 +27,15 @@ Train any multimodal model architectures including language models (Qwen series)
 
 Built with distributed training optimizations (FSDP2 Multi-dimensional Parallelism, Ulysses Sequence Parallel, Flash Attention, Liger Kernel, Muon optimizer, Native Sparse Attention) and a modular design for easy extensibility.
 
+**Efficiency Report**
+
+> [TBD] We will soon report the MFU metrics of following models.
+
+1. Qwen LLM series
+2. Qwen VLM series
+3. BAGEL
+4. dLLM
+
 ## 🚀 Quick Start
 
 ### Installation
