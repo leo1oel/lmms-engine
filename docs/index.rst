@@ -22,6 +22,8 @@ Welcome to the LMMs Engine documentation! LMMs Engine is a flexible and extensib
    :maxdepth: 1
    :caption: Developer Guide
 
+   developer_guide/new_dataset_guide
+   developer_guide/new_processor_guide
    developer_guide/new_model_guide
    developer_guide/new_trainer_guide
 
