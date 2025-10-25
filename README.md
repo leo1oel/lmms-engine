@@ -77,7 +77,7 @@ python -m lmms_engine.launch.cli config_yaml=examples/qwen3_vl/example_config.ya
 
 | Model | Architecture | FSDP2 | Ulysses SP | Muon | Packing | NSA | Highlights | Quick Start |
 |-------|-------------|-------|------------|------|---------|-----|------------------|-------------|
-| **[BAGEL](src/lmms_engine/models/bagel)** | Vision+Generation | ✅ | ❌ | ✅ | ✅ | ✅ | Unified visual understanding & generation | [test](test/train/bagel/train_bagel.py) |
+| **[BAGEL](src/lmms_engine/models/bagel)** | Vision+Generation | ✅ | TBD | ✅ | ✅ | ✅ | Unified visual understanding & generation | [test](test/train/bagel/train_bagel.py) |
 | **[dLLM (Qwen3)](examples/diffusion_language_model)** | Diffusion LM | ✅ | ❌ | ✅ | ❌ | ❌ | Masked diffusion language model | [run.sh](examples/diffusion_language_model/run.sh) |
 | **[Qwen2.5-Omni](examples/qwen2_5_omni)** | Vision+Audio+Text | ✅ | ✅ | ✅ | ✅ | ❌ | Unified multimodal (image, audio, text) | [run.sh](examples/qwen2_5_omni/run.sh) |
 | **[Qwen2.5](src/lmms_engine/models/qwen2)** | Text | ✅ | ✅ | ✅ | ✅ | ❌ | Large Language Model | [run.sh](test/train/qwen2_5/train_qwen2_5_iterable.py) |
