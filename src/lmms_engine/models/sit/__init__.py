@@ -20,15 +20,13 @@ else:
     class SiTModel:
         def __init__(self, *args, **kwargs):
             raise ImportError(
-                "SiT model requires optional dependencies.\n"
-                "Install with: pip install lmms_engine[sit]"
+                "SiT model requires optional dependencies.\n" "Install with: pip install lmms_engine[sit]"
             )
 
     class SiT:
         def __init__(self, *args, **kwargs):
             raise ImportError(
-                "SiT model requires optional dependencies.\n"
-                "Install with: pip install lmms_engine[sit]"
+                "SiT model requires optional dependencies.\n" "Install with: pip install lmms_engine[sit]"
             )
 
 

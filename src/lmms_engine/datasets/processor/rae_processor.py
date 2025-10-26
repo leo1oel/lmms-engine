@@ -22,11 +22,7 @@ class RaeSiglipDataProcessor(BaseQwen2_5_DataProcessor):
         image_processor = processor.image_processor
         size_attr = getattr(image_processor, "size", 256)
         if isinstance(size_attr, dict):
-            image_size = (
-                size_attr.get("shortest_edge")
-                or size_attr.get("height")
-                or size_attr.get("width")
-            )
+            image_size = size_attr.get("shortest_edge") or size_attr.get("height") or size_attr.get("width")
         else:
             image_size = size_attr
         if image_size is None:
@@ -53,9 +49,7 @@ class RaeSiglipDataProcessor(BaseQwen2_5_DataProcessor):
         add_generation_prompt=False,  # Whether add a generation prompt at the end
         **kwargs,
     ):
-        assert (
-            audios is None and videos is None
-        ), "RaeSiglipDataProcessor does not support audio and video"
+        assert audios is None and videos is None, "RaeSiglipDataProcessor does not support audio and video"
 
         processed = []
         for image in images:
@@ -71,9 +65,7 @@ class RaeSiglipDataProcessor(BaseQwen2_5_DataProcessor):
             else:
                 left = 0
                 top = 0
-            cropped = resized.crop(
-                (left, top, left + self.image_size, top + self.image_size)
-            )
+            cropped = resized.crop((left, top, left + self.image_size, top + self.image_size))
             tensor = TF.to_tensor(cropped)
             processed.append(tensor)
 

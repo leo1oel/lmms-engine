@@ -57,9 +57,7 @@ class BaseQwen2_5_DataProcessor(AeroDataProcessor):
                     image = image.resize((height, 28))
                 new_images.append(image)
             images = new_images
-            image_inputs = self.processor.image_processor(
-                images, return_tensors="pt", **output_kwargs["images_kwargs"]
-            )
+            image_inputs = self.processor.image_processor(images, return_tensors="pt", **output_kwargs["images_kwargs"])
             image_inputs["image_sizes"] = image_inputs.pop("image_grid_thw")
             merge_size = self.processor.image_processor.merge_size
             num_image_tokens = [
@@ -79,26 +77,16 @@ class BaseQwen2_5_DataProcessor(AeroDataProcessor):
 
             fps = output_kwargs["videos_kwargs"].pop("fps", 2.0)
             if isinstance(fps, (int, float)):
-                second_per_grid_ts = [
-                    self.processor.video_processor.temporal_patch_size / fps
-                ] * len(video_grid_thw)
+                second_per_grid_ts = [self.processor.video_processor.temporal_patch_size / fps] * len(video_grid_thw)
             elif hasattr(fps, "__len__") and len(fps) == len(video_grid_thw):
-                second_per_grid_ts = [
-                    self.processor.video_processor.temporal_patch_size / tmp
-                    for tmp in fps
-                ]
+                second_per_grid_ts = [self.processor.video_processor.temporal_patch_size / tmp for tmp in fps]
             else:
                 raise ValueError(
                     f"The length of fps ({len(fps) if hasattr(fps, '__len__') else fps}) must be equal to the length of video_grid_thw ({len(video_grid_thw)}) or fps should be a single number."
                 )
-            videos_inputs.update(
-                {"second_per_grid_ts": torch.tensor(second_per_grid_ts)}
-            )
+            videos_inputs.update({"second_per_grid_ts": torch.tensor(second_per_grid_ts)})
             merge_length = self.processor.video_processor.merge_size**2
-            num_video_tokens = [
-                (video_grid_thw[index].prod() // merge_length)
-                for index in range(len(video_grid_thw))
-            ]
+            num_video_tokens = [(video_grid_thw[index].prod() // merge_length) for index in range(len(video_grid_thw))]
         else:
             num_video_tokens = None
 
@@ -153,9 +141,7 @@ class BaseQwen2_5_DataProcessor(AeroDataProcessor):
     ):
         special_tokens = self.processor.tokenizer.additional_special_tokens
         special_tokens.extend(["<|im_start|>", "<|im_end|>"])
-        unmask_tokens_idx = [
-            self.processor.tokenizer.convert_tokens_to_ids(t) for t in special_tokens
-        ]
+        unmask_tokens_idx = [self.processor.tokenizer.convert_tokens_to_ids(t) for t in special_tokens]
         input_id, target = [], []
         image_start_from = 0
         audio_start_from = 0
@@ -195,9 +181,7 @@ class BaseQwen2_5_DataProcessor(AeroDataProcessor):
                 target += encode_id
 
         if add_generation_prompt:
-            generation_tokens = self.processor.tokenizer.encode(
-                "<|im_start|>assistant\n"
-            )
+            generation_tokens = self.processor.tokenizer.encode("<|im_start|>assistant\n")
             input_id += generation_tokens
             target += [-100] * len(generation_tokens)
         assert len(input_id) == len(target), f"{len(input_id)} != {len(target)}"

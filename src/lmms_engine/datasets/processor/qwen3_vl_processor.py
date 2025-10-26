@@ -52,18 +52,14 @@ class Qwen3_VLDataProcessor(BaseQwen2_5_DataProcessor):
             **kwargs,
         )
         if images is not None:
-            image_inputs = self.processor.image_processor(
-                images=images, **output_kwargs["images_kwargs"]
-            )
+            image_inputs = self.processor.image_processor(images=images, **output_kwargs["images_kwargs"])
             image_grid_thw = image_inputs["image_grid_thw"]
         else:
             image_inputs = {}
             image_grid_thw = None
 
         if videos is not None:
-            videos_inputs = self.processor.video_processor(
-                videos=videos, **output_kwargs["videos_kwargs"]
-            )
+            videos_inputs = self.processor.video_processor(videos=videos, **output_kwargs["videos_kwargs"])
             video_grid_thw = videos_inputs["video_grid_thw"]
             # If user has not requested video metadata, pop it
             if "return_metadata" not in kwargs:
@@ -78,18 +74,13 @@ class Qwen3_VLDataProcessor(BaseQwen2_5_DataProcessor):
 
         if image_grid_thw is not None:
             merge_length = self.processor.image_processor.merge_size**2
-            num_image_tokens = [
-                grid_thw.prod() // merge_length for grid_thw in image_grid_thw
-            ]
+            num_image_tokens = [grid_thw.prod() // merge_length for grid_thw in image_grid_thw]
         else:
             num_image_tokens = None
 
         if video_grid_thw is not None:
             merge_length = self.processor.video_processor.merge_size**2
-            num_video_tokens = [
-                grid_thw[1:].prod() // (merge_length**2)
-                for grid_thw in video_grid_thw
-            ]
+            num_video_tokens = [grid_thw[1:].prod() // (merge_length**2) for grid_thw in video_grid_thw]
         else:
             num_video_tokens = None
 
@@ -126,9 +117,7 @@ class Qwen3_VLDataProcessor(BaseQwen2_5_DataProcessor):
     ):
         special_tokens = self.processor.tokenizer.additional_special_tokens
         special_tokens.extend(["<|im_start|>", "<|im_end|>"])
-        unmask_tokens_idx = [
-            self.processor.tokenizer.convert_tokens_to_ids(t) for t in special_tokens
-        ]
+        unmask_tokens_idx = [self.processor.tokenizer.convert_tokens_to_ids(t) for t in special_tokens]
         input_id, target = [], []
         image_start_from = 0
         video_start_from = 0
@@ -175,9 +164,7 @@ class Qwen3_VLDataProcessor(BaseQwen2_5_DataProcessor):
                 target += encode_id
 
         if add_generation_prompt:
-            generation_tokens = self.processor.tokenizer.encode(
-                "<|im_start|>assistant\n"
-            )
+            generation_tokens = self.processor.tokenizer.encode("<|im_start|>assistant\n")
             input_id += generation_tokens
             target += [-100] * len(generation_tokens)
         assert len(input_id) == len(target), f"{len(input_id)} != {len(target)}"
@@ -224,17 +211,9 @@ class Qwen3_VLDataProcessor(BaseQwen2_5_DataProcessor):
                 # If last frame, the end token will be added to the expanded encode id later, no need to include
                 # If middle frame, both start and end tokens need to be included
                 if frame_idx == 0:
-                    curr_expand_video_ids = (
-                        timestamp_token_id
-                        + visual_tokens
-                        + [self.processor.vision_end_token_id]
-                    )
+                    curr_expand_video_ids = timestamp_token_id + visual_tokens + [self.processor.vision_end_token_id]
                 elif frame_idx == video_grid_thw[idx + start_from][0] - 1:
-                    curr_expand_video_ids = (
-                        [self.processor.vision_start_token_id]
-                        + timestamp_token_id
-                        + visual_tokens
-                    )
+                    curr_expand_video_ids = [self.processor.vision_start_token_id] + timestamp_token_id + visual_tokens
                 else:
                     curr_expand_video_ids = (
                         [self.processor.vision_start_token_id]

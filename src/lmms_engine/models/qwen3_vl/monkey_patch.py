@@ -20,9 +20,7 @@ try:
     from liger_kernel.transformers.rope import liger_rotary_pos_emb
     from liger_kernel.transformers.swiglu import LigerSwiGLUMLP
 except:
-    print(
-        "liger kernel not installed, please install it with `pip install liger-kernel`"
-    )
+    print("liger kernel not installed, please install it with `pip install liger-kernel`")
 
 from lmms_engine.models.monkey_patch import MONKEY_PATCHER
 
@@ -96,9 +94,7 @@ def apply_liger_kernel_to_qwen3_vl(
 
         modeling_qwen3_vl.Qwen3VLModel.forward = qwen3_ops_model_forward
         modeling_qwen3_vl.Qwen3VLTextModel.forward = qwen3_ops_text_model_forward
-        modeling_qwen3_vl.Qwen3VLTextDecoderLayer.forward = (
-            qwen3_ops_decoder_layer_forward
-        )
+        modeling_qwen3_vl.Qwen3VLTextDecoderLayer.forward = qwen3_ops_decoder_layer_forward
         modeling_qwen3_vl.Qwen3VLTextAttention.forward = qwen3_ops_attn_forward
 
     if get_ulysses_sequence_parallel_world_size() > 1:

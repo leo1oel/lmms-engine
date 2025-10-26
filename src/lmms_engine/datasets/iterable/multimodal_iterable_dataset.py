@@ -51,15 +51,11 @@ class MultiModalIterableDataset(BaseIterableDataset, MultiModalDataLoadingMixin)
             self.storage_client = Client()
             self.bucket_name = self.config.bucket_name
         elif self.config.object_storage == "azure":
-            self.storage_client = BlobServiceClient(
-                account_url=SAS_URL, retry_policy=RETRY_POLICY
-            )
+            self.storage_client = BlobServiceClient(account_url=SAS_URL, retry_policy=RETRY_POLICY)
             self.bucket_name = self.config.bucket_name
         self.cur_idx = 0
         if not dist.is_initialized():
-            logger.info(
-                "Distributed environment not initialized, setting rank and world size to 0 and 1"
-            )
+            logger.info("Distributed environment not initialized, setting rank and world size to 0 and 1")
             self.rank = 0
             self.world_size = 1
         else:
@@ -67,11 +63,7 @@ class MultiModalIterableDataset(BaseIterableDataset, MultiModalDataLoadingMixin)
                 "Distributed environment initialized, setting rank and world size to dist.get_rank() and dist.get_world_size()"
             )
             # Try to use data parallel rank if available, otherwise fall back to global rank
-            if (
-                pgm is not None
-                and hasattr(pgm, "process_group_manager")
-                and pgm.process_group_manager is not None
-            ):
+            if pgm is not None and hasattr(pgm, "process_group_manager") and pgm.process_group_manager is not None:
                 self.rank = pgm.process_group_manager.dp_rank
                 self.world_size = pgm.process_group_manager.dp_world_size
             else:
@@ -96,18 +88,12 @@ class MultiModalIterableDataset(BaseIterableDataset, MultiModalDataLoadingMixin)
             # Handle both external YAML files and inline datasets
             if self.config.datasets is not None:
                 # Use inline datasets defined in the config
-                self.data_list, self.data_folder = DataUtilities.load_inline_datasets(
-                    self.config.datasets
-                )
+                self.data_list, self.data_folder = DataUtilities.load_inline_datasets(self.config.datasets)
             elif self.config.dataset_path is not None:
                 # Load from external YAML file
-                self.data_list, self.data_folder = DataUtilities.load_yaml(
-                    self.config.dataset_path
-                )
+                self.data_list, self.data_folder = DataUtilities.load_yaml(self.config.dataset_path)
             else:
-                raise ValueError(
-                    "For yaml format, either 'datasets' or 'dataset_path' must be provided"
-                )
+                raise ValueError("For yaml format, either 'datasets' or 'dataset_path' must be provided")
         else:
             raise NotImplementedError
 
@@ -149,18 +135,14 @@ class MultiModalIterableDataset(BaseIterableDataset, MultiModalDataLoadingMixin)
         rank = self.rank
         world_size = self.world_size
 
-        assert isinstance(
-            self.data_list, HFDataset
-        ), "Data list must be a HuggingFace dataset for IterableDataset"
+        assert isinstance(self.data_list, HFDataset), "Data list must be a HuggingFace dataset for IterableDataset"
 
         # HF shard logic, if len(dataset) % n == l
         # The first l ranks will have dataset length (len(dataset) // n) + 1
         # The rest ranks will have dataset length (len(dataset) // n)
         rank_mod_size = len(self.data_list) % world_size
         per_rank_size = [
-            (len(self.data_list) // world_size) + 1
-            if i < rank_mod_size
-            else (len(self.data_list) // world_size)
+            (len(self.data_list) // world_size) + 1 if i < rank_mod_size else (len(self.data_list) // world_size)
             for i in range(world_size)
         ]
         start_index = sum(per_rank_size[:rank])
@@ -169,18 +151,14 @@ class MultiModalIterableDataset(BaseIterableDataset, MultiModalDataLoadingMixin)
         # Shard the data according to distributed environment
         curr_data_folder = self.data_folder[start_index:end_index]
         # self.data_folder = self.data_folder[start_index:end_index]
-        curr_data_list = self.data_list.shard(
-            num_shards=world_size, index=rank, contiguous=True
-        )
+        curr_data_list = self.data_list.shard(num_shards=world_size, index=rank, contiguous=True)
 
         if worker_info is None:
             iter_start = 0
             iter_end = len(curr_data_list)
         else:
             # split workload
-            per_worker = int(
-                math.ceil(len(curr_data_list) / float(worker_info.num_workers))
-            )
+            per_worker = int(math.ceil(len(curr_data_list) / float(worker_info.num_workers)))
             worker_id = worker_info.id
             iter_start = worker_id * per_worker
             iter_end = min(iter_start + per_worker, len(curr_data_list))
@@ -200,9 +178,7 @@ class MultiModalIterableDataset(BaseIterableDataset, MultiModalDataLoadingMixin)
             # Iterate through the dataset once per epoch
             while self.cur_idx < len(curr_data_list):
                 try:
-                    data_dict = self.get_one_sample(
-                        self.cur_idx, curr_data_folder[self.cur_idx], curr_data_list
-                    )
+                    data_dict = self.get_one_sample(self.cur_idx, curr_data_folder[self.cur_idx], curr_data_list)
                 except Exception as e:
                     traceback.print_exc()
                     logger.error(f"Error getting one sample: {e}, skip this sample")
@@ -239,9 +215,7 @@ class MultiModalIterableDataset(BaseIterableDataset, MultiModalDataLoadingMixin)
             self.cur_idx = 0
             while self.cur_idx < len(curr_data_list):
                 try:
-                    yield self.get_one_sample(
-                        self.cur_idx, curr_data_folder[self.cur_idx], curr_data_list
-                    )
+                    yield self.get_one_sample(self.cur_idx, curr_data_folder[self.cur_idx], curr_data_list)
                 except Exception as e:
                     traceback.print_exc()
                     logger.error(f"Error getting one sample: {e}, skip this sample")

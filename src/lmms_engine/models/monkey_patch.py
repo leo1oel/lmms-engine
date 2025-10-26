@@ -45,11 +45,7 @@ class MonkeyPatcher:
         apply_fn_signature = inspect.signature(apply_fn)
 
         # Filter out the keyword arguments that are not supported by the apply function
-        applicable_kwargs = {
-            key: value
-            for key, value in kwargs.items()
-            if key in apply_fn_signature.parameters
-        }
+        applicable_kwargs = {key: value for key, value in kwargs.items() if key in apply_fn_signature.parameters}
 
         logger.info(
             f"Applying patches for model type: {model_type} with patch type: {patch_type} with kwargs: {applicable_kwargs}"
@@ -57,21 +53,15 @@ class MonkeyPatcher:
 
         apply_fn(**applicable_kwargs)
 
-    def apply_monkey_patch_to_instance(
-        self, model: PreTrainedModel, patch_type, **kwargs
-    ):
+    def apply_monkey_patch_to_instance(self, model: PreTrainedModel, patch_type, **kwargs):
         if isinstance(patch_type, list):
             for patch in patch_type:
                 self.apply_monkey_patch_to_instance(model, patch, **kwargs)
             return
 
-        model_type = getattr(model, "config", None) and getattr(
-            model.config, "model_type", None
-        )
+        model_type = getattr(model, "config", None) and getattr(model.config, "model_type", None)
         if not model_type:
-            logger.info(
-                "Model type could not be determined from model config. No patches will be applied."
-            )
+            logger.info("Model type could not be determined from model config. No patches will be applied.")
             return
         if model_type not in self._dict.keys():
             logger.info(
@@ -84,11 +74,7 @@ class MonkeyPatcher:
         apply_fn_signature = inspect.signature(apply_fn)
 
         # Filter out the keyword arguments that are not supported by the apply function
-        applicable_kwargs = {
-            key: value
-            for key, value in kwargs.items()
-            if key in apply_fn_signature.parameters
-        }
+        applicable_kwargs = {key: value for key, value in kwargs.items() if key in apply_fn_signature.parameters}
         logger.info(
             f"Applying patches to model instance with model type: {model_type} with patch type: {patch_type} with kwargs: {applicable_kwargs}"
         )

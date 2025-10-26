@@ -25,9 +25,7 @@ class AeroDataProcessor:
 
     def save_pretrained(self, save_directory: str):
         if not hasattr(self, "processor"):
-            raise ValueError(
-                "Processor has not been built yet. Please call build() first."
-            )
+            raise ValueError("Processor has not been built yet. Please call build() first.")
         # Build a clean processor for saving
         new_processor = self._build_processor()
         new_processor.save_pretrained(save_directory)
@@ -92,9 +90,7 @@ class AeroDataProcessor:
     ):
         special_tokens = self.processor.tokenizer.additional_special_tokens
         special_tokens.extend(["<|im_start|>", "<|im_end|>"])
-        unmask_tokens_idx = [
-            self.processor.tokenizer.convert_tokens_to_ids(t) for t in special_tokens
-        ]
+        unmask_tokens_idx = [self.processor.tokenizer.convert_tokens_to_ids(t) for t in special_tokens]
         input_id, target = [], []
         # The purpose of start from is to record which mm token we are at. Supposing the format is interleaved
         # Then we need to record this so that the mm token can be expanded correctly per conversation
@@ -104,9 +100,7 @@ class AeroDataProcessor:
         video_start_from = 0
 
         if add_system_prompt and hf_messages[0]["role"] != "system":
-            input_id += self.processor.tokenizer.apply_chat_template(
-                [{"role": "system", "content": system_message}]
-            )
+            input_id += self.processor.tokenizer.apply_chat_template([{"role": "system", "content": system_message}])
             target += [-100] * len(input_id)
         for message in hf_messages:
             role = message["role"]
@@ -153,9 +147,7 @@ class AeroDataProcessor:
             # Before image pos, no expand
             expanded_encode_id.extend(encode_id[prev:pos])
             # Image pos, expand
-            expanded_encode_id.extend(
-                [self.image_token_id] * image_token_num[idx + start_from]
-            )
+            expanded_encode_id.extend([self.image_token_id] * image_token_num[idx + start_from])
             prev = pos + 1
 
             if idx == len(image_pos) - 1:
@@ -177,9 +169,7 @@ class AeroDataProcessor:
             # Before image pos, no expand
             expanded_encode_id.extend(encode_id[prev:pos])
             # Image pos, expand
-            expanded_encode_id.extend(
-                [self.audio_token_id] * audio_token_num[idx + start_from]
-            )
+            expanded_encode_id.extend([self.audio_token_id] * audio_token_num[idx + start_from])
             prev = pos + 1
 
             if idx == len(audio_pos) - 1:
@@ -201,9 +191,7 @@ class AeroDataProcessor:
             # Before image pos, no expand
             expanded_encode_id.extend(encode_id[prev:pos])
             # Image pos, expand
-            expanded_encode_id.extend(
-                [self.video_token_id] * video_token_num[idx + start_from]
-            )
+            expanded_encode_id.extend([self.video_token_id] * video_token_num[idx + start_from])
             prev = pos + 1
 
             if idx == len(video_pos) - 1:
@@ -218,9 +206,7 @@ class AeroDataProcessor:
         if image_token is None:
             return None
         else:
-            return self.processor.tokenizer.convert_tokens_to_ids(
-                self.processor.image_token
-            )
+            return self.processor.tokenizer.convert_tokens_to_ids(self.processor.image_token)
 
     @property
     def audio_token_id(self):
@@ -228,9 +214,7 @@ class AeroDataProcessor:
         if audio_token is None:
             return None
         else:
-            return self.processor.tokenizer.convert_tokens_to_ids(
-                self.processor.audio_token
-            )
+            return self.processor.tokenizer.convert_tokens_to_ids(self.processor.audio_token)
 
     @property
     def video_token_id(self):
@@ -238,9 +222,7 @@ class AeroDataProcessor:
         if video_token is None:
             return None
         else:
-            return self.processor.tokenizer.convert_tokens_to_ids(
-                self.processor.video_token
-            )
+            return self.processor.tokenizer.convert_tokens_to_ids(self.processor.video_token)
 
     def get_input_mode(self, audios, images, videos):
         if audios is not None:

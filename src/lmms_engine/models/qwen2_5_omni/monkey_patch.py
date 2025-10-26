@@ -21,9 +21,7 @@ try:
     from liger_kernel.transformers.rope import liger_rotary_pos_emb
     from liger_kernel.transformers.swiglu import LigerSwiGLUMLP
 except:
-    print(
-        "liger kernel not installed, please install it with `pip install liger-kernel`"
-    )
+    print("liger kernel not installed, please install it with `pip install liger-kernel`")
 
 import transformers
 from transformers import PreTrainedModel
@@ -98,9 +96,7 @@ def apply_liger_kernel_to_qwen2_5_omni(
     if cross_entropy:
         modeling_qwen2_5_omni.CrossEntropyLoss = LigerCrossEntropyLoss
     if fused_linear_cross_entropy:
-        modeling_qwen2_5_omni.Qwen2_5OmniThinkerForConditionalGeneration.forward = (
-            qwen2_5_omni_lce_forward
-        )
+        modeling_qwen2_5_omni.Qwen2_5OmniThinkerForConditionalGeneration.forward = qwen2_5_omni_lce_forward
     if swiglu:
         modeling_qwen2_5_omni.Qwen2MLP = LigerSwiGLUMLP
     if use_rmpad:
@@ -112,18 +108,12 @@ def apply_liger_kernel_to_qwen2_5_omni(
             text_model_forward as qwen2_5_omni_text_model_forward,
         )
 
-        modeling_qwen2_5_omni.Qwen2_5OmniThinkerTextModel.forward = (
-            qwen2_5_omni_text_model_forward
-        )
-        modeling_qwen2_5_omni.Qwen2_5OmniDecoderLayer.forward = (
-            qwen2_5_omni_decoder_layer_forward
-        )
+        modeling_qwen2_5_omni.Qwen2_5OmniThinkerTextModel.forward = qwen2_5_omni_text_model_forward
+        modeling_qwen2_5_omni.Qwen2_5OmniDecoderLayer.forward = qwen2_5_omni_decoder_layer_forward
         modeling_qwen2_5_omni.Qwen2_5OmniAttention.forward = qwen2_5_omni_attn_forward
 
     if get_ulysses_sequence_parallel_world_size() > 1:
-        patch_vlm_for_ulysses_input_slicing(
-            modeling_qwen2_5_omni.Qwen2_5OmniThinkerTextModel
-        )
+        patch_vlm_for_ulysses_input_slicing(modeling_qwen2_5_omni.Qwen2_5OmniThinkerTextModel)
 
     if model is not None:
         if isinstance(model, Qwen2_5OmniThinkerForConditionalGeneration):

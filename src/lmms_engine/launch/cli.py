@@ -56,9 +56,7 @@ def create_train_task(config):
         )
 
     # Always setup ProcessGroupManager - required by trainers even in single-GPU mode
-    setup_process_group_manager(
-        tp_size=1, cp_size=sp_degree, pp_size=1, dp_size=dp_size
-    )
+    setup_process_group_manager(tp_size=1, cp_size=sp_degree, pp_size=1, dp_size=dp_size)
 
     trainer_args = config.pop("trainer_args")
     trainer_args = TrainingArguments(**trainer_args)
