@@ -55,7 +55,7 @@ pre-commit run --all-files
 
 ## Commit Message Convention
 
-We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification to maintain a clean and meaningful commit history. This helps us:
+We use a standardized commit message format to maintain a clean and meaningful commit history. This helps us:
 
 - Automatically generate changelogs
 - Quickly understand the nature of changes
@@ -64,7 +64,7 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 ### Commit Message Format
 
 ```
-<type>: <description>
+[type] <description>
 
 [optional body]
 
@@ -73,21 +73,21 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 
 ### Types
 
-- **feat:** A new feature or functionality
-- **fix:** A bug fix
-- **docs:** Documentation changes only
-- **style:** Code style changes (formatting, missing semicolons, etc.) that don't affect functionality
-- **refactor:** Code changes that neither fix bugs nor add features
-- **perf:** Performance improvements
-- **test:** Adding or updating tests
-- **chore:** Maintenance tasks, dependency updates, build configuration
-- **ci:** Changes to CI/CD configuration files and scripts
+- **[feat]** - A new feature or functionality
+- **[fix]** - A bug fix
+- **[docs]** - Documentation changes only
+- **[style]** - Code style changes (formatting, missing semicolons, etc.) that don't affect functionality
+- **[refactor]** - Code changes that neither fix bugs nor add features
+- **[perf]** - Performance improvements
+- **[test]** - Adding or updating tests
+- **[chore]** - Maintenance tasks, dependency updates, build configuration
+- **[ci]** - Changes to CI/CD configuration files and scripts
 
 ### Examples
 
 #### Feature Addition
 ```
-feat: add qwen omni iterable dataset support
+[feat] add qwen omni iterable dataset support
 
 Implements new iterable dataset for Qwen Omni model with custom processor
 and data loading pipeline.
@@ -95,7 +95,7 @@ and data loading pipeline.
 
 #### Bug Fix
 ```
-fix: resolve bagel model configuration error
+[fix] resolve bagel model configuration error
 
 Corrects the model initialization parameters in the Bagel configuration
 to prevent runtime errors during training.
@@ -103,7 +103,7 @@ to prevent runtime errors during training.
 
 #### Documentation Update
 ```
-docs: update training guide with YAML examples
+[docs] update training guide with YAML examples
 
 Adds comprehensive YAML configuration examples to the training documentation
 for better clarity.
@@ -111,16 +111,16 @@ for better clarity.
 
 #### Refactoring
 ```
-refactor: simplify dataset processor initialization
+[refactor] simplify dataset processor initialization
 
 Reduces code complexity by consolidating processor factory methods.
 ```
 
 ### Guidelines
 
-1. **Keep the subject line concise** (50 characters or less)
+1. **Keep the subject line concise** (72 characters or less)
 2. **Use the imperative mood** ("add" not "added", "fix" not "fixed")
-3. **Don't capitalize the first letter** after the type prefix
+3. **Use lowercase** for the description after the type prefix
 4. **No period at the end** of the subject line
 5. **Use the body** to explain what and why, not how
 6. **Reference issues** in the footer (e.g., `Fixes #123`)

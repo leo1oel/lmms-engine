@@ -10,22 +10,22 @@
 
 ## Commit Message Convention
 
-Please follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for your commit messages:
+Please follow our standardized commit message format:
 
-- `feat:` - New features or functionality
-- `fix:` - Bug fixes
-- `docs:` - Documentation changes only
-- `style:` - Code style changes (formatting, missing semicolons, etc.)
-- `refactor:` - Code refactoring without changing functionality
-- `perf:` - Performance improvements
-- `test:` - Adding or updating tests
-- `chore:` - Maintenance tasks, dependency updates, etc.
-- `ci:` - CI/CD configuration changes
+- `[feat]` - New features or functionality
+- `[fix]` - Bug fixes
+- `[docs]` - Documentation changes only
+- `[style]` - Code style changes (formatting, missing semicolons, etc.)
+- `[refactor]` - Code refactoring without changing functionality
+- `[perf]` - Performance improvements
+- `[test]` - Adding or updating tests
+- `[chore]` - Maintenance tasks, dependency updates, etc.
+- `[ci]` - CI/CD configuration changes
 
 **Examples:**
-- `feat: add qwen omni iterable dataset support`
-- `fix: resolve bagel model configuration error`
-- `docs: update training guide with YAML examples`
+- `[feat] add qwen omni iterable dataset support`
+- `[fix] resolve bagel model configuration error`
+- `[docs] update training guide with YAML examples`
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for more details.
 
