@@ -16,6 +16,8 @@ Model FLOPs Utilization (MFU) measures the efficiency of GPU usage during traini
 ### Qwen2.5 7B & Qwen2.5-VL-7B
 
 **Configuration:**
+
+- 4 Node x 8 A800-SXM4 GPU 
 - Packing length: 81,920
 - Optimization: Remove padding + Liger kernel + Iterable dataset
 - Training mode: FSDP distributed
@@ -42,6 +44,8 @@ trainer_args:
 ### Qwen2.5-VL-7B & Qwen3-VL-8B
 
 **Configuration:**
+
+- 4 Node x 8 A800-SXM4 GPU
 - Packing length: 61,440
 - Optimization: Remove padding + Liger kernel + Iterable dataset
 - Training mode: FSDP distributed
@@ -70,6 +74,8 @@ trainer_args:
 ### Qwen2.5-VL-7B
 
 **Configuration:**
+
+- 4 Node x 8 A800-SXM4 GPU
 - Packing length: 51,200
 - Optimization: Remove padding + Liger kernel + Iterable dataset
 - Training mode: FSDP distributed
@@ -94,6 +100,8 @@ trainer_args:
 ### Qwen3-VL-8B with Sequence Parallel
 
 **Configuration:**
+
+- 4 Node x 8 A800-SXM4 GPU
 - Packing length: 51,200
 - Sequence Parallel degree: 2
 - Optimization: Remove padding + Liger kernel + Iterable dataset
