@@ -21,7 +21,7 @@ LMMs-Engine
 
 ## Annoucement
 
-- [2025-10] 🎉🎉 **Efficiency Report**: We provide comprehensive Model FLOPs Utilization (MFU) metrics for various model architectures and training configurations. See [MFU Reference](docs/reference/mfu.md) for detailed benchmarks. The **Covered Models:** include (1) Qwen2.5 & Qwen2.5-VL (Text & Image modalities) (2) Qwen3-VL (Image & Video modalities) (3) BAGEL (in progress) (4) dLLM (in progress).
+- [2025-10] 🎉🎉 **Efficiency Report**: We provide comprehensive Model FLOPs Utilization (MFU) metrics for various model architectures and training configurations. See [MFU Reference](docs/reference/mfu.md) for detailed benchmarks.
 - [2025-10] 🚀🚀 **LMMs-Engine v0.1** is here! a lean, efficient framework built to train unified multimodal model at scale.
 
 ## 🚀 Quick Start
