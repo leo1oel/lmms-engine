@@ -13,25 +13,16 @@ LMMs-Engine
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/EvolvingLMMs-Lab/lmms-engine?style=social)](https://github.com/LMMs-Lab/lmms-engine/stargazers)
 
-[Quick Start](#-quick-start) • [Examples](#-featured-examples) • [Model Support](#-model-support) • [Optimizations](#️-optimizations) • [Architecture](#️-architecture) • [Documentation](#-documentation)
+[Quick Start](#-quick-start) • [Examples](#-featured-examples) • [Model Support](#-model-support) • [Optimizations](#️-optimizations) • [Codebase Architecture](#️-codebase-architecture) • [Documentation](#-documentation)
 
 </div>
 
 ---
 
-## Overview
+## Annoucement
 
-**LMMs-Engine:** a lean, efficient framework built to train unified multimodal model at scale.
-
-**Efficiency Report**
-
-> We provide comprehensive Model FLOPs Utilization (MFU) metrics for various model architectures and training configurations. See [MFU Reference](docs/reference/mfu.md) for detailed benchmarks.
-
-**Covered Models:**
-1. Qwen2.5 & Qwen2.5-VL (Text & Image modalities)
-2. Qwen3-VL (Image & Video modalities)
-3. BAGEL (in progress)
-4. dLLM (in progress)
+- [2025-10] 🎉🎉 **Efficiency Report**: We provide comprehensive Model FLOPs Utilization (MFU) metrics for various model architectures and training configurations. See [MFU Reference](docs/reference/mfu.md) for detailed benchmarks. The **Covered Models:** include (1) Qwen2.5 & Qwen2.5-VL (Text & Image modalities) (2) Qwen3-VL (Image & Video modalities) (3) BAGEL (in progress) (4) dLLM (in progress).
+- [2025-10] 🚀🚀 **LMMs-Engine v0.1** is here! a lean, efficient framework built to train unified multimodal model at scale.
 
 ## 🚀 Quick Start
 
