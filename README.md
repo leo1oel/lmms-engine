@@ -105,7 +105,7 @@ python -m lmms_engine.launch.cli config_yaml=examples/qwen3_vl/example_config.ya
 
 ### Language Models
 - **Qwen2/2.5/3 series** - Full Liger kernel support with fused operations
-- **Linear Attention Models** - Recurrent architecture optimized for Muon; Please Install FLA first.
+- **Linear Attention Models** - Recurrent architecture optimized for Muon; Please install [FLA](https://github.com/fla-org/flash-linear-attention) first.
 - **Custom architectures** - Extensible via `@register_model()` decorator
 
 ## ⚡️ Optimizations
