@@ -67,7 +67,6 @@ You can visit the `config.py` file under each subfolder to see what parameters a
 
 ### Key fields
 
-- **type/trainer**: Always `type: trainer` with a `config` block.
 - **trainer_type**: Use `hf_trainer` for standard HF Trainer or `fsdp2_trainer` for PyTorch FSDP2.
 - **dataset_config.dataset_format**: `yaml`. You can either set `dataset_path` to an external YAML, or embed datasets inline via `datasets`.
 - **datasets**: Each entry defines `path`, optional `data_folder`, and `data_type` (e.g., `arrow`, `parquet`).
