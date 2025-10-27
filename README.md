@@ -365,6 +365,16 @@ We welcome contributions! Please see our [Design Principles](docs/reference/desi
 - **Minimal Changes**: Only modify code related to the task
 - **Less Code = Less Debt**: Minimize code footprint
 
+## 😊 Acknowledgement
+
+Thanks to the following projects for their excellent work:
+
+- [axolotl](https://github.com/axolotl-ai-cloud/axolotl)
+- [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory)
+- [nanotron](https://github.com/huggingface/nanotron)
+- [veScale](https://github.com/volcengine/veScale)
+- [veOmni](https://github.com/ByteDance-Seed/VeOmni)
+
 ## 📝 Citation
 
 If you use LMMs Engine in your research, please cite:
