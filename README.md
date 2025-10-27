@@ -66,15 +66,15 @@ python -m lmms_engine.launch.cli config_yaml=examples/qwen3_vl/example_config.ya
 | Model | Architecture | FSDP2 | Ulysses SP | Muon | Packing | NSA | Highlights | Quick Start |
 |-------|-------------|-------|------------|------|---------|-----|------------------|-------------|
 | **[BAGEL](src/lmms_engine/models/bagel)** | Vision+Generation | ✅ | TBD | ✅ | ✅ | ✅ | Unified visual understanding & generation | [run.sh](examples/bagel/run.sh) |
-| **[dLLM (Qwen3)](examples/diffusion_language_model)** | Diffusion LM | ✅ | ❌ | ✅ | ❌ | ❌ | Masked diffusion language model | [run.sh](examples/diffusion_language_model/run.sh) |
-| **[Qwen2.5-Omni](examples/qwen2_5_omni)** | Vision+Audio+Text | ✅ | ✅ | ✅ | ✅ | ❌ | Unified multimodal (image, audio, text) | [run.sh](examples/qwen2_5_omni/run.sh) |
 | **[Qwen2.5](src/lmms_engine/models/qwen2)** | Text | ✅ | ✅ | ✅ | ✅ | ❌ | Large Language Model | [run.sh](examples/qwen2_5_llm/run.sh) |
 | **[Qwen2.5-VL](src/lmms_engine/models/qwen2_5_vl/)** | Vision+Text | ✅ | ✅ | ✅ | ✅ | ❌ | Multimodal Model | [run.sh](examples/qwen2_5_vl/run.sh) |
+| **[Qwen2.5-Omni](examples/qwen2_5_omni)** | Vision+Audio+Text | ✅ | ✅ | ✅ | ✅ | ❌ | Unified multimodal (image, audio, text) | [run.sh](examples/qwen2_5_omni/run.sh) |
 | **[Qwen3-VL](examples/qwen3_vl)** | Vision-Language | ✅ | ✅ | ✅ | ✅ | ❌ | Native-resolution, long context (10K+ tokens) | [run.sh](examples/qwen3_vl/run.sh) |
-| **[RAE-SigLip](examples/representation_autoencoder)** | Visual AutoEncoder | ✅ | ❌ | ✅ | ❌ | ❌ | Representation AutoEncoder, LPIPS, EMA | [run.sh](examples/representation_autoencoder/run.sh) |
-| **[SiT](examples/scalable_interpolant_transformer)** | Diffusion Transformer | ✅ | ❌ | ✅ | ❌ | ❌ | Interpolant Transformer, CFG, ImageNet-1K | [run.sh](examples/scalable_interpolant_transformer/run.sh) |
 | **[WanVideo](examples/wanvideo)** | Video Generation | ✅ | ❌ | ✅ | ❌ | ❌ | T2V/I2V/V2V generation (1.3B/14B) | [run.sh](examples/wanvideo/run.sh) |
 | **[FLA models](examples/dgn)** | Liear Attn Models | ✅ | ❌ | ✅ | ✅ | ❌ | Efficient architecture, FineWeb-Edu pretraining | [run.sh](examples/dgn/run.sh) |
+| **[dLLM (Qwen3)](examples/diffusion_language_model)** | Diffusion LM | ✅ | ❌ | ✅ | ❌ | ❌ | Masked diffusion language model | [run.sh](examples/diffusion_language_model/run.sh) |
+| **[RAE-SigLip](examples/representation_autoencoder)** | Visual AutoEncoder | ✅ | ❌ | ✅ | ❌ | ❌ | Representation AutoEncoder, LPIPS, EMA | [run.sh](examples/representation_autoencoder/run.sh) |
+| **[SiT](examples/scalable_interpolant_transformer)** | Diffusion Transformer | ✅ | ❌ | ✅ | ❌ | ❌ | Interpolant Transformer, CFG, ImageNet-1K | [run.sh](examples/scalable_interpolant_transformer/run.sh) |
 
 **Optimization Legend:**
 - **FSDP2**: Fully Sharded Data Parallel v2 for distributed training
@@ -118,7 +118,7 @@ Production-grade efficiency from distributed training to kernel fusion.
 
 - **Ulysses Sequence Parallel** - Splits sequence dimension across GPUs for ultra-long contexts. Critical for vision-language models like Qwen3-VL with 10K+ visual tokens.
 
-- **Multi-dimensional Parallelism (TODO)** - Compose TP × CP × PP × DP meshes for cluster-scale training.
+- **Multi-dimensional Parallelism** - Compose TP x PP × DP meshes for cluster-scale training.
 
 ### Memory & Compute Optimizations
 
