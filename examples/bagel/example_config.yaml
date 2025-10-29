@@ -10,8 +10,8 @@ dataset_config:
   # Update this to your dataset path
   # Example dataset: https://huggingface.co/datasets/kcz358/bagel-example
   datasets:
-    - path: /path/to/your/dataset
-      data_folder: /path/to/your/data/folder
+    - path: /path/to/your/dataset/
+      data_folder: /path/to/your/data_folder/
       data_type: arrow
   shuffle: true
   eval_dataset_path: null
@@ -19,7 +19,7 @@ dataset_config:
   bucket_name: null
   packing: true
   packing_strategy: first_fit
-  packing_length: 4096
+  packing_length: 10240
   filter_overlong: true
   filter_overlong_workers: 8
   max_length: null
@@ -33,7 +33,7 @@ trainer_args:
   do_predict: false
   eval_strategy: 'no'
   prediction_loss_only: false
-  per_device_train_batch_size: 1
+  per_device_train_batch_size: 2
   per_device_eval_batch_size: 8
   gradient_accumulation_steps: 1
   eval_accumulation_steps: null
@@ -50,7 +50,7 @@ trainer_args:
   lr_scheduler_type: cosine
   lr_scheduler_kwargs: {}
   warmup_ratio: 0.1
-  warmup_steps: 0
+  warmup_steps: 20
   log_level: passive
   log_level_replica: warning
   log_on_each_node: true
@@ -124,7 +124,7 @@ trainer_args:
   group_by_length: true
   length_column_name: length
   report_to:
-  - tensorboard
+  - wandb
   project: huggingface
   trackio_space_id: trackio
   ddp_find_unused_parameters: null
