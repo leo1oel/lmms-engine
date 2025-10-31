@@ -123,15 +123,15 @@ Production-grade efficiency from distributed training to kernel fusion.
 
 ### Memory & Compute Optimizations
 
-- **Flash Attention + Unpadding** - Tiled attention with `use_rmpad` eliminates all padding computation. 2-3× speedup on variable-length sequences.
+- **Flash Attention + Unpadding** - Tiled attention with `use_rmpad` eliminates all padding computation.
 
-- **Native Sparse Attention (NSA)** - Hybrid attention mechanism combining compressed attention, topk sparse attention, and sliding window attention. Enables efficient long-context processing for BAGEL model with reduced memory footprint.
+- **Native Sparse Attention (NSA)** - Hybrid attention mechanism combining compressed attention, topk sparse attention, and sliding window attention.
 
-- **Liger Kernel** - Triton fused kernels (CrossEntropy, RMSNorm, RoPE, SwiGLU) achieve 30% memory reduction by avoiding intermediate materializations.
+- **Liger Kernel** - Triton fused kernels (CrossEntropy, RMSNorm, RoPE, SwiGLU) achieve memory reduction by avoiding intermediate materializations.
 
 - **Monkey Patching System** - Runtime kernel injection via `lmms_engine/configs/monkey_patch/` for model-specific optimizations without code modification.
 
-- **Sequence Packing** - First-fit bin packing achieves 35-40% MFU vs 20-25% without packing. Combined with unpadding for zero padding waste.
+- **Sequence Packing** - Faster first-fit bin packing.
 
 ### Advanced Optimizer
 
